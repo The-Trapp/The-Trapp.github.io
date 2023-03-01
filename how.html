@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href = "./assets/css/how.css" rel = "stylesheet" type ="text/css">
+    <title>Document</title>
+</head>
+<body>
+    <header>
+        <nav>
+        <a href="index.html">Main Page</a>
+        <a href ="how.html">How It Works</a>
+        <a href="methods.html">The Methods</a>
+        <a href="encryption.html">Encryption</a>
+        </nav>
+        <h1>
+            How It Works
+        </h1>
+    </header>
+    <article id="benefits">
+        <h2>
+            Benefits
+        </h2>
+        <ul>
+            <li>
+                One benefit to using Cryptography is that it allows your data to remain confidential. Through encryption
+only authorized people are allowed to access the data.
+
+            </li>
+            <li>
+                Another benefit is Data integrity and Authentication are protected. Digital Signatures help allow us to
+know exactly where the data came from and that it has come intact from the sender with no third party changes.
+
+            </li>
+        </ul>
+    </article>
+    <div class="blocks">
+        <article class="left">
+            <h2>
+                Symmetric
+            </h2>
+            <p>
+                In Symmetric Cryptography there is a single key used to both encrypt and
+decrypt the data being transferred. When the sender encrypts their data it is locked with a key
+to keep the data unreadable and out of the hands of the general public. The key is then transferred to the
+destination it is intended for and they use this key to unlock the data and decrypt it making it readable again.
+
+
+            </p>
+            <hr>
+            <h3>
+                Pros
+            </h3>
+            <p>
+            Symmetric Cryptography is fast and efficient taking little to no time to encrypt and decrypt.
+            </p>
+            <h3>
+                Cons
+            </h3>
+            <p>Having only one key is a security risk. If the key is lost or stolen, an outside source now has access
+                to your messages even if they are encrypted.
+ </p>
+        </article>
+        <article class="right">
+            <h2>
+                Asymmetric
+            </h2>
+            <p>
+                Asymmetric Cryptography is also known as public key encryption. Within Asymmetric
+            Cryptography two keys are used. The first key is a public key that the general public has access to.
+            Everyone can see this key and when you want to send a message to another person, you take their public key
+            and encrypt your message with it. The second key is the private key. This key is never shared and held onto
+            by only the reciever. When they receive a message encrypted by their public key found online, they use their
+            private key to decrypt the message and see the original content sent by the source.
+                
+            </p>
+            <hr>
+            <h3>
+                Pros
+            </h3>
+            <p>Asymmetric Cryptography is much more secure. There is no need to transfer keys so it keeps your
+                data secure so that only the people who are intended to receive the information actually get it.
+            </p>
+            <h3>
+                Cons
+            </h3>
+            <p>Due to the extra steps of using 2 keys the encryption process is over a million times slower
+                than Symmetric encryption.</p>
+        </article>
+    </div>
+    <br>
+
+    
+</body>
+</html>

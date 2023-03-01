@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+    <head>
+		<meta charset="UTF-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link href = "./assets/css/style.css" rel = "stylesheet" type ="text/css">
+		<title>BrickHack Encryption Webpage</title>
+	</head>
+  <body>
+	<header>
+        <nav>
+        <a href="index.html">Main Page</a>
+        <a href ="how.html">How it Works</a>
+        <a href="methods.html">The Methods</a>
+        <a href="encryption.html">Encryption</a>
+    
+        </nav>
+        <h1>
+            Ceasar Cipher
+        </h1>
+    </header>
+    <nav>
+    <a href="ceasar.html">Ceasar Cipher</a>
+    <a href ="aes.html">AES Cipher</a>
+    <a href="monoalphabetic.html">Monoalphabetic Cipher</a>
+    <a href="rsa.html">RSA Number Cipher</a>
+    </nav>
+	<br>
+	<hr>
+	<br>
+	<article id="encryption">
+    <p>
+      <label for="message">Enter your message:</label><br>
+      <textarea id="message" rows="5" cols="50"></textarea>
+    </p>
+  
+    <p>
+      <label for="shift">Enter the shift amount:</label>
+      <input type="number" id="shift" min="1" max="25">
+    </p>
+  
+    <p>
+      <button onclick="encrypt()">Encrypt</button>
+      <button onclick="decrypt()">Decrypt</button>
+    </p>
+  
+    <p>
+      <label for="result">Result:</label><br>
+      <textarea id="result" rows="5" cols="50" readonly></textarea>
+    </p>
+    <script>
+
+function encrypt() {
+			var message = document.getElementById("message").value;
+			var shift = parseInt(document.getElementById("shift").value);
+
+			var result = "";
+
+			for (var i = 0; i < message.length; i++) {
+				var charCode = message.charCodeAt(i);
+
+				if (charCode >= 65 && charCode <= 90) { // uppercase letter
+					result += String.fromCharCode((charCode - 65 + shift) % 26 + 65);
+				} else if (charCode >= 97 && charCode <= 122) { // lowercase letter
+					result += String.fromCharCode((charCode - 97 + shift) % 26 + 97);
+				} else { // not a letter
+					result += message.charAt(i);
+				}
+			}
+
+			document.getElementById("result").value = result;
+		}
+
+		function decrypt() {
+			var message = document.getElementById("message").value;
+			var shift = parseInt(document.getElementById("shift").value);
+
+			var result = "";
+
+			for (var i = 0; i < message.length; i++) {
+				var charCode = message.charCodeAt(i);
+
+				if (charCode >= 65 && charCode <= 90) { // uppercase letter
+					result += String.fromCharCode((charCode - 65 - shift + 26) % 26 + 65);
+				} else if (charCode >= 97 && charCode <= 122) { // lowercase letter
+					result += String.fromCharCode((charCode - 97 - shift + 26) % 26 + 97);
+				} else { // not a letter
+					result += message.charAt(i);
+				}
+			}
+
+			document.getElementById("result").value = result;
+		}
+    </script>
+	</article>
+  </body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+    <head>
+		<meta charset="UTF-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link href = "./assets/css/style.css" rel = "stylesheet" type ="text/css">
+		<title>Monoalphabetic</title>
+	</head>
+  <body>
+	<header>
+        <nav>
+        <a href="index.html">Main Page</a>
+        <a href ="how.html">How it Works</a>
+        <a href="methods.html">The Methods</a>
+        <a href="encryption.html">Encryption</a>
+    
+        </nav>
+        <h1>
+            Monoalphabetic Cipher
+        </h1>
+    </header>
+    <nav>
+    <a href="ceasar.html">Ceasar Cipher</a>
+    <a href ="aes.html">AES Cipher</a>
+    <a href="monoalphabetic.html">Monoalphabetic Cipher</a>
+    <a href="rsa.html">RSA Number Cipher</a>
+    </nav>
+	<br>
+	<hr>
+	<br>
+	<article id="encryption">
+  <label for="message">Enter your message:</label><br>
+  <textarea id="message" rows="5" cols="70"></textarea>
+  <label for="aLph1">A B C D E F G H I J K L M N O P Q R S T U V W X Y Z</label><br>
+  <label for="alph2">Q W E R T Y U I O P A S D F G H J K L Z X C V B N M</label><br>
+</p>
+
+<p>
+  <button onclick="encrypt()">Encrypt</button>
+  <button onclick="decrypt()">Decrypt</button>
+</p>
+
+<p>
+  <label for="result">Result:</label><br>
+  <textarea id="result" rows="5" cols="50" readonly></textarea>
+</p>
+</head>
+<body>
+  <script>
+    const substitutionKey = {
+    "a": "q",
+    "b": "w",
+    "c": "e",
+    "d": "r",
+    "e": "t",
+    "f": "y",
+    "g": "u",
+    "h": "i",
+    "i": "o",
+    "j": "p",
+    "k": "a",
+    "l": "s",
+    "m": "d",
+    "n": "f",
+    "o": "g",
+    "p": "h",
+    "q": "j",
+    "r": "k",
+    "s": "l",
+    "t": "z",
+    "u": "x",
+    "v": "c",
+    "w": "v",
+    "x": "b",
+    "y": "n",
+    "z": "m"
+  };
+  function encrypt() {
+  var result = "";
+  var message = document.getElementById("message").value;
+  for (let i = 0; i < message.length; i++) {
+    const plainChar = message[i].toLowerCase();
+    const cipherChar = substitutionKey[plainChar] || plainChar;
+    result += (message[i] === plainChar.toUpperCase()) ? cipherChar.toUpperCase() : cipherChar
+  }
+  document.getElementById("result").value = result;
+}
+ 
+// decryption function
+function decrypt() {
+  var result = '';
+  var message = document.getElementById("message").value;
+
+  for (let i = 0; i < message.length; i++) {
+    // find the letter that corresponds to the cipher
+    for (let letter in substitutionKey) {
+      if (substitutionKey[letter] === message[i].toLowerCase()) {
+        result += letter;
+        break;
+      }
+    }
+}
+document.getElementById("result").value = result;
+
+}
+</script>
+</article>
+  </body>
+</html>

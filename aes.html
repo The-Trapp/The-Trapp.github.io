@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <meta charset="UTF-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <link href = "./assets/css/style.css" rel = "stylesheet" type ="text/css">
+   <title>AES</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/aes.js" integrity="sha256-/H4YS+7aYb9kJ5OKhFYPUjSJdrtV6AeyJOtTkw6X72o=" crossorigin="anonymous"></script>
+</head>
+<body>
+   <header>
+      <nav>
+      <a href="index.html">Main Page</a>
+      <a href ="how.html">How it Works</a>
+      <a href="methods.html">The Methods</a>
+      <a href="encryption.html">Encryption</a>
+  
+      </nav>
+      <h1>
+          AES Cipher
+      </h1>
+  </header>
+  <nav>
+  <a href="ceasar.html">Ceasar Cipher</a>
+  <a href ="aes.html">AES Cipher</a>
+  <a href="monoalphabetic.html">Monoalphabetic Cipher</a>
+  <a href="rsa.html">RSA Number Cipher</a>
+  </nav>
+ <br>
+ <hr>
+ <br>
+ <article id="encryption">
+   <br />Data to encrypt:
+   <input id="text" type="text" />
+   <br />password: <input id="password" type="text" />
+   <br /><button onclick="encrypt()">encrypt</button>
+   <br />Encrypted Value:<br /><span id="EncryptedValue"></span>
+   <br />
+   <button onclick="decrypt()">decrypt</button>
+   <br />Decrypted Value: <span id="decrypted"></span>
+    <script>
+	  function encrypt() {
+         var encrypted = CryptoJS.AES.encrypt(
+            document.getElementById("text").value,
+            document.getElementById("password").value
+         );
+         document.getElementById("EncryptedValue").innerHTML = encrypted;
+         document.getElementById("decrypted").innerHTML = "";
+      }
+
+      function decrypt() {
+         var decrypted = CryptoJS.AES.decrypt(
+            document.getElementById("EncryptedValue").innerHTML,
+            document.getElementById("password").value
+         ).toString(CryptoJS.enc.Utf8);
+         document.getElementById("decrypted").innerHTML = decrypted;
+         document.getElementById("EncryptedValue").innerHTML = "";
+      }
+   </script>
+
+   </article>
+</body>
+</html>

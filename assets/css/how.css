@@ -1,0 +1,78 @@
+* {
+    font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+}
+h1{
+    font-size: 45px;
+    color:whitesmoke;
+    text-align: center;
+}
+h2{
+    font-size: 30px;
+}
+
+li{
+    text-align:left !important;
+}
+#benefits{
+    float:center;
+    width: 80%;
+    margin: 0 10%;
+    padding:0 !important;
+}
+article {
+    text-align: center;
+    color:aliceblue;
+    background-color: rgb(1, 119, 158);
+    border:solid 2px black;
+    border-radius: 20px;
+    padding: 0 20px;
+    font-size: 23px;
+    margin:5px;
+}
+
+nav a{
+    font-size: 25px;
+    padding: 0 30px;
+    text-decoration: none;
+    color:aliceblue;
+    font-variant: small-caps;
+    flex: 1;
+    background-color: #333;
+    border: 1px solid;
+    padding: 0.5rem;
+    text-align: center;
+    text-decoration: none;
+    transition: all 0.5s ease-out;
+}
+nav {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+
+  
+a:hover,a:focus {
+    background-color: aliceblue;
+    color: #333;
+}
+
+
+.blocks{
+    margin:1px;
+}
+.left{
+    width:40%;
+    float:left;
+}
+.right{
+    width:40%;
+    float:right;
+}
+
+html { 
+    background: url(../media/matrix_lines.jpg) no-repeat center center fixed; 
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
+  }

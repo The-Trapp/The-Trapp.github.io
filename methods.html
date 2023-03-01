@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href = "./assets/css/methods.css" rel = "stylesheet" type ="text/css">
+    <title>Document</title>
+</head>
+<body>
+    <header>
+        <nav>
+        <a href="index.html">Main Page</a>
+        <a href ="how.html">How It Works</a>
+        <a href="methods.html">The Methods</a>
+        <a href="encryption.html">Encryption</a>
+        </nav>
+        <h1>
+            Methods
+        </h1>
+    </header>
+    <div class="blocks">
+        <article class="left">
+            <h3>
+                Caesar Cipher
+            </h3>
+            <p>
+                    Caesar Cipher is a simple type of encryption that uses substitution to shift the
+                letters in a sentence to something else. Before the encryption begins a shift value is implemented to
+                alter the sentence. This shift value works as the key. From there the sentence is broken up letter by letter and
+                shifted down the alphabet the amount of times as the shift value. A shift value of 2 would make the letter A turn into C
+                and a value of 3 would make the letter C turn into F. If the shift passes the letter Z the process just begins
+                again from letter A.
+                
+
+            </p>
+        </article>
+        <article class="right">
+            <h3>
+                AES
+            </h3>
+            <p>
+                AES is also known as Advanced Encryption Standard which uses a symmetric block cipher that takes a block of letters and
+            and encrypts the message block by block. Each block size is 128 bits which is the largest that have been created yet.
+            These blocks are encrypted using keys that are 128, 192 and 256 bits. Each block is given a different key and they are paired together.
+            These encrypted blocks are then added together and put into one longer ciphertext. When it reaches its destination the blocks are decrypted
+            one at a time and the user is left with the original message.
+
+            </p>
+        </article>
+    </div>
+    <div>
+        <br>
+    </div>
+    <div class="blocks">
+        <article class="left">
+            <h3>
+                Monoalphabetic Substitution
+            </h3>
+            <p>
+                    Monoalphabetic Substitution is a cipher that takes each plaintext symbol in the alphabet
+                and assigns it a cipher character. This correspondence works as the ciphers key. When you
+                take the original message and exchange all of the characters with cipher characters you are
+                left with a completely new cipher text that is unreadable. To reverse it, the receiver just needs
+                to look at the correspondence chart and match the letters back to their original plaintext symbols.
+
+            </p>
+        </article>
+        <article class="right">
+            <h3>
+                RSA
+            </h3>
+            <p>
+                RSA which is known as Rivest Shamir Adleman (named after its creators) is a public key encryption method.
+                It is used to exchange session keys in SSL/TLS protocols and it functions with integer numbers rather than
+                bits and bytes. RSA uses complex math and formulas that are easy to compute in one direction but very
+                difficult to compute going the other way. This creates a strong protection as the user can encrypt a message
+                using RSA and unless the receiver has the key to how to solve the complex equation they will have no way of knowing
+                what the message says.
+
+            </p>
+        </article>
+    </div>
+    
+</body>
+</html>
