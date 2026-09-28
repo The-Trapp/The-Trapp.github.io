@@ -92,11 +92,11 @@
 <tbody>
 <tr>
 <td>User (<code>/home/admin/user.txt</code>)</td>
-<td><code>6686adbfa7300956a23ec90bf481a941</code></td>
+<td><code>[REDACTED]</code></td>
 </tr>
 <tr>
 <td>Root (<code>/root/root.txt</code>)</td>
-<td><code>ecc37a35b70c06c32fe0fa101659180b</code></td>
+<td><code>[REDACTED]</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -193,7 +193,7 @@ password=HtbPassw0rd!1
 </code></pre>
 <p>Read the user flag:</p>
 <pre><code class="language-bash">cat /home/admin/user.txt
-# 6686adbfa7300956a23ec90bf481a941
+# [REDACTED]
 </code></pre>
 <h3>5. Kernel exploit → root</h3>
 <p><code>/var/mail/admin</code> contained mail from <code>ch4p</code> warning about a serious Linux kernel CVE in "OverlayFS / FUSE":</p>
@@ -223,10 +223,10 @@ mkdir -p ovlcap/lower ovlcap/work ovlcap/upper ovlcap/merge   # pre-create tree
 <pre><code>-rwsrwxrwx 1 nobody nogroup 16096 ... file      # setuid bit survived copy-up
 [+] mount success
 uid=0(root) gid=0(root) groups=0(root),1000(admin)
-ecc37a35b70c06c32fe0fa101659180b               # root flag
+[REDACTED]               # root flag
 </code></pre>
 <p>Root flag:</p>
-<pre><code>ecc37a35b70c06c32fe0fa101659180b
+<pre><code>[REDACTED]
 </code></pre>
 <hr />
 <h2>Techniques Demonstrated</h2>

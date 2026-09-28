@@ -89,12 +89,12 @@
 <tr>
 <td>User</td>
 <td><code>/home/marimo/user.txt</code></td>
-<td><code>ac917564ef8ade9b37dab35550f902c3</code></td>
+<td><code>[REDACTED]</code></td>
 </tr>
 <tr>
 <td>Root</td>
 <td><code>/root/root.txt</code></td>
-<td><code>548cbc37b7c8f27cb642479ee1f3e7cd</code></td>
+<td><code>[REDACTED]</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -125,7 +125,7 @@
 </ul>
 <h3>5. User Flag</h3>
 <ul>
-<li><code>cat /home/marimo/user.txt</code> → <strong><code>ac917564ef8ade9b37dab35550f902c3</code></strong>.</li>
+<li><code>cat /home/marimo/user.txt</code> → <strong><code>[REDACTED]</code></strong>.</li>
 </ul>
 <h3>6. Privilege Escalation — CVE-2026-41651 (PackageKit "Pack2TheRoot" TOCTOU)</h3>
 <ul>
@@ -134,7 +134,7 @@
   1. <code>InstallFiles(SIMULATE, dummy.deb)</code> — polkit bypassed, idle queued.
   2. <code>InstallFiles(NONE, payload.deb)</code> — cached transaction overwritten.
   3. GLib idle fires → <code>pk_transaction_run</code> reads the overwritten payload → <code>postinst</code> runs as root → drops a SUID <code>bash</code>.</li>
-<li>Ran <code>python3 cve-2026-41651.py --exec 'cat /root/root.txt'</code> → <strong>root flag</strong> <code>548cbc37b7c8f27cb642479ee1f3e7cd</code> (verified <code>euid=0</code> via <code>/tmp/.suid_bash -p -c id</code>).</li>
+<li>Ran <code>python3 cve-2026-41651.py --exec 'cat /root/root.txt'</code> → <strong>root flag</strong> <code>[REDACTED]</code> (verified <code>euid=0</code> via <code>/tmp/.suid_bash -p -c id</code>).</li>
 </ul>
 <h2>Techniques Demonstrated</h2>
 <ol>

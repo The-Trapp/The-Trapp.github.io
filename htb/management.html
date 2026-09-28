@@ -89,12 +89,12 @@
 <tr>
 <td>User</td>
 <td><code>/home/owen/user.txt</code></td>
-<td><code>b1218485151456922b1a6c241a540299</code></td>
+<td><code>[REDACTED]</code></td>
 </tr>
 <tr>
 <td>Root</td>
 <td><code>/root/root.txt</code></td>
-<td><code>71780086d806665f73eed104744e8d04</code></td>
+<td><code>[REDACTED]</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -123,7 +123,7 @@
 <h3>4. Password Reuse → User Flag</h3>
 <ul>
 <li>The LDAP bind password <code>WpczC40GhTbk</code> is reused as the system password for <code>owen</code>.</li>
-<li>SSH as <code>owen</code> → <strong>user flag</strong> <code>b1218485151456922b1a6c241a540299</code>.</li>
+<li>SSH as <code>owen</code> → <strong>user flag</strong> <code>[REDACTED]</code>.</li>
 </ul>
 <h3>5. Privilege Escalation — rdiff-backup Argument Injection</h3>
 <ul>
@@ -136,7 +136,7 @@ cat /tmp/rootbak/root.txt
 </code></pre>
 <ul>
 <li><code>%s</code> is replaced by <code>/</code> (the host portion of <code>/::/root</code>), so the server runs with <code>--restrict-path /</code> — unrestricted read access — and mirrors <code>/root</code> to <code>/tmp/rootbak</code> (still read-only, no root shell needed).</li>
-<li><strong>Root flag</strong> <code>71780086d806665f73eed104744e8d04</code>.</li>
+<li><strong>Root flag</strong> <code>[REDACTED]</code>.</li>
 </ul>
 <h2>Techniques Demonstrated</h2>
 <ul>
