@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hack The Box Writeups · Arthur Trapp</title>
+<meta name="description" content="Penetration testing writeups for retired Hack The Box machines, by Arthur Trapp." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23181a1e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="nav-brand" href="../index.html">arthur<span class="at">@</span>trapp</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#projects">projects</a>
+      <a class="active" href="index.html">writeups</a>
+      <a href="../index.html#contact">contact</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page-hero">
+    <div class="wrap">
+      <div class="crumb"><a href="../index.html">~</a> / writeups</div>
+      <h1>hack the box<span style="color:var(--accent)">_</span></h1>
+      <p class="sub">Full attack-chain writeups for retired Hack The Box machines — from initial recon to root.</p>
+      <div class="meta-tags">
+        <span class="green">5 machines owned</span>
+        <span>Linux</span>
+        <span class="accent">User + Root</span>
+      </div>
+      <p class="note" style="margin-top:22px; margin-bottom:0;">Retired machines, full chains from recon to root. <a class="note-link" href="https://app.hackthebox.com/users/1517323" target="_blank" rel="noopener">→ view my HTB profile</a></p>
+    </div>
+  </div>
+
+  <div class="wrap writeup-grid">
+    <a class="writeup-card" href="cohort.html">
+      <div>
+        <div class="name">Cohort</div>
+        <div class="meta"><span class="diff">Easy</span> · SSRF → Marimo WebSocket RCE → PackageKit TOCTOU</div>
+      </div>
+      <span class="arrow">→</span>
+    </a>
+    <a class="writeup-card" href="management.html">
+      <div>
+        <div class="name">Management</div>
+        <div class="meta"><span class="diff">Easy</span> · OpenAM deserialization RCE → GLPI decryption → rdiff-backup</div>
+      </div>
+      <span class="arrow">→</span>
+    </a>
+    <a class="writeup-card" href="nexus.html">
+      <div>
+        <div class="name">Nexus</div>
+        <div class="meta"><span class="diff">Easy</span> · Git-history leak → TinyMCE upload RCE → git-tree path traversal</div>
+      </div>
+      <span class="arrow">→</span>
+    </a>
+    <a class="writeup-card" href="orion.html">
+      <div>
+        <div class="name">Orion</div>
+        <div class="meta"><span class="diff">Easy</span> · Craft CMS object-injection RCE → telnetd auth bypass</div>
+      </div>
+      <span class="arrow">→</span>
+    </a>
+    <a class="writeup-card" href="twomillion.html">
+      <div>
+        <div class="name">TwoMillion</div>
+        <div class="meta"><span class="diff">Easy</span> · API mass-assignment → command injection → OverlayFS kernel exploit</div>
+      </div>
+      <span class="arrow">→</span>
+    </a>
+  </div>
+</main>
+<footer>
+  <div class="wrap footer-row">
+    <span>© 2026 Arthur Trapp · Rochester, NY</span>
+    <span class="clearance">ACTIVE TS/SCI CLEARANCE</span>
+  </div>
+</footer>
+<script>
+  const io = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.writeup-card').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

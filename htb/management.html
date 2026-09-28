@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Management — HTB Writeup · Arthur Trapp</title>
+<meta name="description" content="OpenAM deserialization RCE (CVE-2026-33439) → GLPI XChaCha20 credential decryption → rdiff-backup argument injection" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23181a1e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="nav-brand" href="../index.html">arthur<span class="at">@</span>trapp</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#projects">projects</a>
+      <a class="active" href="index.html">writeups</a>
+      <a href="../index.html#contact">contact</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page-hero">
+    <div class="wrap">
+      <div class="crumb"><a href="../index.html">~</a> / <a href="index.html">writeups</a> / management</div>
+      <h1>Management</h1>
+      <p class="sub">Hack The Box · <span class="accent">Easy</span> · Linux</p>
+      <div class="meta-tags">
+        <span class="green">Easy</span>
+        <span>Linux</span>
+        <span class="accent">User + Root owned</span>
+      </div>
+    </div>
+  </div>
+  <article class="content wrap">
+<h2>Machine Overview</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Name</td>
+<td>Management</td>
+</tr>
+<tr>
+<td>Difficulty</td>
+<td>Easy</td>
+</tr>
+<tr>
+<td>OS</td>
+<td>Linux (Ubuntu, nginx)</td>
+</tr>
+<tr>
+<td>IP</td>
+<td>10.129.146.178</td>
+</tr>
+<tr>
+<td>Vhosts</td>
+<td><code>management.htb</code> (main SPA), <code>sso.management.htb</code> (OpenAM 16.0.5)</td>
+</tr>
+<tr>
+<td>Key components</td>
+<td>OpenAM 16.0.5 (SSO), OpenDJ (LDAP dir server), GLPI (service desk), rdiff-backup 2.2.6</td>
+</tr>
+<tr>
+<td>Open ports</td>
+<td>22 (SSH), 80/443 (nginx), 1689 + 33771 (OpenDJ JMX / Java RMI), 4444 (SSL LDAP admin connector), 50389 (OpenDJ LDAP)</td>
+</tr>
+</tbody>
+</table></div>
+<h2>Flags</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Path</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>User</td>
+<td><code>/home/owen/user.txt</code></td>
+<td><code>b1218485151456922b1a6c241a540299</code></td>
+</tr>
+<tr>
+<td>Root</td>
+<td><code>/root/root.txt</code></td>
+<td><code>71780086d806665f73eed104744e8d04</code></td>
+</tr>
+</tbody>
+</table></div>
+<h2>Attack Chain</h2>
+<h3>1. Reconnaissance</h3>
+<ul>
+<li><code>nmap -p- --min-rate 5000</code> → 22 (SSH OpenSSH 9.6p1), 80/443 (nginx), 1689 (Java RMI — OpenDJ JMX), 4444 (SSL/LDAP, CN=<code>sso.management.htb</code>), 33771 (Java RMI), 50389 (LDAP, <strong>anonymous bind allowed</strong>).</li>
+<li>Vhost fuzzing → <code>sso.management.htb</code> serves <strong>OpenAM 16.0.5</strong> (ForgeRock SSO) at <code>/openam</code>, <code>management.htb</code> serves an obfuscated JS SPA.</li>
+<li>The SPA loads an AES-GCM-encrypted bundle <code>assets/app.enc</code> (key hardcoded in-page: <code>C+XDTUB0EuPY7BE+xzRcMP6dNjWd0h0GPxdt8tWSTVY=</code>); decrypted it to confirm it's just a login shell that fronts the OpenAM SSO.</li>
+</ul>
+<h3>2. Initial Access — OpenAM Pre-Auth Deserialization RCE (CVE-2026-33439)</h3>
+<ul>
+<li>The infamous OpenAM JATO deserialization RCE (CVE-2021-35464) is patched here for <code>jato.pageSession</code>, but <code>jato.clientSession</code> reaches the same unfiltered <code>ApplicationObjectInputStream</code> — <strong>CVE-2026-33439</strong> (affects OpenAM ≤ 16.0.5).</li>
+<li>Used the public PoC <code>jonaschen0103/cve-2026-33439-poc</code>. Built the gadget chain locally (PriorityQueue → shaded <code>org.openidentityplatform.openam.click.control.Column</code> → <code>TemplatesImpl</code> + Xalan <code>AbstractTranslet</code>), requiring <strong>JDK 21</strong> (JDK 25 produces incompatible serialized objects). Downloaded a portable Temurin JDK 21 to compile.</li>
+<li>Vulnerable endpoint: <code>/openam/ui/PWResetUserValidation</code> (a JATO ViewBean). Interactive-mode payload reads a <code>cmd</code> HTTP header, executes via <code>sh -c</code>, returns stdout inline — no reverse listener needed.</li>
+<li>Achieved RCE as <code>openam</code> (uid 996).</li>
+</ul>
+<h3>3. GLPI LDAP Credential Decryption</h3>
+<ul>
+<li>Enumerated the box: GLPI installed at <code>/opt/glpi</code>.</li>
+<li><code>/opt/glpi/config/config_db.php</code> leaked DB credentials: <code>glpi</code> / <code>8rhu0L6Pw4Y7</code> @ <code>glpidb</code>.</li>
+<li><code>/opt/glpi/config/glpicrypt.key</code> = 32-byte GLPI master key.</li>
+<li>Queried <code>glpi_authldaps</code> → <code>rootdn=cn=svc-glpi,ou=services,dc=management,dc=htb</code>, <code>rootdn_passwd</code> = encrypted blob <code>avrqW65aZWKzLAKWhPxZGn1eLj3yYAnwUp08mEazsJUWfI5cqbaP6vM12w0p/ykpmyO3Pw==</code>.</li>
+<li>Decrypted using GLPI's <code>GLPIKey</code> crypto: <strong>XChaCha20-Poly1305-IETF</strong> (libsodium), format <code>base64(nonce[24] + ciphertext)</code>, AAD = nonce, key = <code>glpicrypt.key</code>. Plaintext: <strong><code>WpczC40GhTbk</code></strong>.</li>
+</ul>
+<h3>4. Password Reuse → User Flag</h3>
+<ul>
+<li>The LDAP bind password <code>WpczC40GhTbk</code> is reused as the system password for <code>owen</code>.</li>
+<li>SSH as <code>owen</code> → <strong>user flag</strong> <code>b1218485151456922b1a6c241a540299</code>.</li>
+</ul>
+<h3>5. Privilege Escalation — rdiff-backup Argument Injection</h3>
+<ul>
+<li><code>sudo -l</code>: <code>(root) NOPASSWD: /usr/bin/rdiff-backup --server --restrict-path /opt/backup --restrict-mode read-only *</code></li>
+<li>The trailing <code>*</code> wildcard permits extra arguments. rdiff-backup honors the <strong>last</strong> <code>--restrict-path</code>.</li>
+<li>Exploit: run rdiff-backup as a <em>client</em> with a crafted <code>--remote-schema</code> that (a) escalates to root via the allowed sudo command and (b) appends a second <code>--restrict-path %s</code> where <code>%s</code> (the "host") is <code>/</code>, overriding the <code>/opt/backup</code> restriction:</li>
+</ul>
+<pre><code class="language-bash">rdiff-backup --remote-schema 'sudo /usr/bin/rdiff-backup --server --restrict-path /opt/backup --restrict-mode read-only --restrict-path %s' backup /::/root /tmp/rootbak
+cat /tmp/rootbak/root.txt
+</code></pre>
+<ul>
+<li><code>%s</code> is replaced by <code>/</code> (the host portion of <code>/::/root</code>), so the server runs with <code>--restrict-path /</code> — unrestricted read access — and mirrors <code>/root</code> to <code>/tmp/rootbak</code> (still read-only, no root shell needed).</li>
+<li><strong>Root flag</strong> <code>71780086d806665f73eed104744e8d04</code>.</li>
+</ul>
+<h2>Techniques Demonstrated</h2>
+<ul>
+<li>Vhost/subdomain enumeration (OpenAM SSO + obfuscated SPA)</li>
+<li>AES-GCM bundle decryption (hardcoded key)</li>
+<li>Java deserialization RCE (OpenAM <code>jato.clientSession</code> whitelist bypass, CVE-2026-33439)</li>
+<li>JDK gadget-chain compilation (PriorityQueue → Click <code>Column</code> → <code>TemplatesImpl</code>)</li>
+<li>GLPI credential recovery: DB creds leak + master-key (glpicrypt.key) + XChaCha20-Poly1305 decryption of <code>glpi_authldaps.rootdn_passwd</code></li>
+<li>Credential reuse (LDAP bind password → system user)</li>
+<li>sudo wildcard + <code>--remote-schema</code> argument injection (rdiff-backup <code>--restrict-path</code> override → arbitrary read as root)</li>
+</ul>
+<h2>Tools Used</h2>
+<p><code>nmap</code>, <code>curl</code>, Python 3, Temurin JDK 21 (<code>javac</code>/<code>java</code>), <code>cve-2026-33439-poc</code>, <code>mysql</code> (target), <code>php</code>/libsodium (target), <code>paramiko</code> (SSH), <code>rdiff-backup</code>.</p>
+    <a class="back-link" href="index.html">← all writeups</a>
+  </article>
+</main>
+<footer>
+  <div class="wrap footer-row">
+    <span>© 2026 Arthur Trapp · Rochester, NY</span>
+    <span class="clearance">ACTIVE TS/SCI CLEARANCE</span>
+  </div>
+</footer>
+<script>
+  const io = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.content h2, .content h3, .content p, .content pre, .content table, .content ul, .content ol, .content blockquote').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

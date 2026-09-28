@@ -1,55 +1,735 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href = "./assets/css/style.css" rel = "stylesheet" type ="text/css">
-    <title>Arthur Trapp</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Arthur Trapp — Cyber Warfare Officer · Offensive Security</title>
+<meta name="description" content="Arthur Trapp — Cyber Warfare Officer and offensive security specialist with an active TS/SCI clearance. Penetration testing, threat emulation, and AI." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23181a1e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #181a1e;
+    --bg-elevated: #1f2227;
+    --fg: #e8eaec;
+    --muted: #9aa1a8;
+    --faint: #6b727a;
+    --accent: #f79c42;
+    --accent-bright: #ffb66b;
+    --accent-dim: #c97a2e;
+    --blue: #7aa2f7;
+    --border: #2a2e34;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; scroll-padding-top: 84px; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection { background: var(--accent); color: #14161a; }
+
+  a { color: inherit; text-decoration: none; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+
+  /* ---------- Header ---------- */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .nav-brand {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--fg);
+  }
+  .nav-brand .at { color: var(--accent); }
+  .nav-links { display: flex; gap: 28px; align-items: center; }
+  .nav-links a {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    transition: color .15s ease;
+  }
+  .nav-links a:hover { color: var(--accent); }
+  .nav-resume {
+    border: 1px solid var(--accent-dim);
+    color: var(--accent) !important;
+    padding: 5px 12px;
+    border-radius: 4px;
+    transition: background .15s ease, color .15s ease;
+  }
+  .nav-resume:hover { background: var(--accent); color: #14161a !important; }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 96px 0 72px; border-bottom: 1px solid var(--border); }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 56px;
+    align-items: center;
+  }
+  .prompt {
+    font-family: var(--mono);
+    font-size: 16px;
+    color: var(--accent);
+    margin-bottom: 18px;
+  }
+  .prompt .cursor { animation: blink 1s step-end infinite; }
+  .hero h1 {
+    font-family: var(--mono);
+    font-size: clamp(44px, 7vw, 76px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    color: var(--fg);
+  }
+  .hero .role {
+    margin-top: 16px;
+    font-size: 19px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .hero .role .accent { color: var(--accent); font-family: var(--mono); }
+  .hero-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 28px;
+  }
+  .tag {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 10px;
+  }
+  .tag.clearance { color: var(--accent); border-color: var(--accent-dim); }
+
+  /* Terminal card */
+  .terminal {
+    position: relative;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 24px 48px -24px rgba(0,0,0,.6);
+  }
+  .terminal::before,
+  .terminal::after {
+    content: "";
+    position: absolute;
+    width: 22px; height: 22px;
+    border-color: var(--accent);
+    border-style: solid;
+    z-index: 2;
+  }
+  .terminal::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; border-top-left-radius: 8px; }
+  .terminal::after { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; border-bottom-right-radius: 8px; }
+  .term-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 16px;
+    background: color-mix(in srgb, var(--bg) 60%, var(--bg-elevated));
+    border-bottom: 1px solid var(--border);
+  }
+  .term-bar .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+  .term-bar .title {
+    margin-left: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+  }
+  .term-body {
+    padding: 20px 22px 26px;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.75;
+    min-height: 250px;
+  }
+  .term-body .line { white-space: pre-wrap; word-break: break-word; }
+  .term-body .t-cmd { color: var(--accent); }
+  .term-body .t-out { color: var(--fg); }
+  .term-body .t-ok { color: #28c840; }
+  .term-body .t-dim { color: var(--faint); }
+  .term-body .cursor { color: var(--accent); animation: blink 1s step-end infinite; }
+
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* ---------- Sections ---------- */
+  section { padding: 72px 0; border-bottom: 1px solid var(--border); }
+  .section-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 36px; }
+  .section-head h2 {
+    font-family: var(--mono);
+    font-size: clamp(24px, 3.4vw, 34px);
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .section-head .count {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--faint);
+  }
+
+  /* About */
+  .about-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 56px; }
+  .about p { color: var(--fg); font-size: 17px; margin-bottom: 18px; }
+  .about p strong { color: var(--accent-bright); font-weight: 600; }
+  .focus-list { list-style: none; }
+  .focus-list li {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 17px;
+  }
+  .focus-list li:last-child { border-bottom: none; }
+  .focus-list .num { font-family: var(--mono); color: var(--accent); font-size: 14px; min-width: 28px; }
+  .focus-list .lbl { font-weight: 500; }
+
+  .lang-block { margin-top: 36px; }
+  .lang-block .lbl { font-family: var(--mono); color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+  .lang-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .lang-pills span {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--fg);
+    border: 1px solid var(--border);
+    padding: 5px 11px;
+    border-radius: 4px;
+  }
+
+  /* Experience */
+  .exp-item {
+    display: grid;
+    grid-template-columns: 190px 1fr;
+    gap: 32px;
+    padding: 26px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .exp-item:last-child { border-bottom: none; }
+  .exp-when { font-family: var(--mono); font-size: 13px; color: var(--faint); line-height: 1.6; padding-top: 4px; }
+  .exp-when .now { color: var(--accent); }
+  .exp-title { font-size: 18px; font-weight: 600; color: var(--fg); }
+  .exp-org { font-family: var(--mono); font-size: 13.5px; color: var(--accent); margin: 4px 0 10px; }
+  .exp-desc { color: var(--muted); font-size: 15px; }
+  .exp-desc ul { list-style: none; margin-top: 8px; }
+  .exp-desc li { position: relative; padding-left: 20px; margin-bottom: 6px; }
+  .exp-desc li::before { content: "—"; position: absolute; left: 0; color: var(--faint); }
+
+  /* Skills */
+  .skills-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .skill-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px 26px;
+  }
+  .skill-card h3 {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  .skill-card p { color: var(--muted); font-size: 14.5px; line-height: 1.75; }
+  .skill-card p .sep { color: var(--faint); margin: 0 4px; }
+
+  /* Education + Certs */
+  .edu-certs { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+  .edu-item { margin-bottom: 28px; }
+  .edu-item .deg { font-size: 17px; font-weight: 600; }
+  .edu-item .school { font-family: var(--mono); color: var(--accent); font-size: 13.5px; margin: 3px 0 4px; }
+  .edu-item .when { font-family: var(--mono); color: var(--faint); font-size: 12.5px; }
+  .edu-item .honor { color: var(--muted); font-size: 14px; margin-top: 4px; }
+  .cert-list { list-style: none; }
+  .cert-list li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 15px;
+  }
+  .cert-list li:last-child { border-bottom: none; }
+  .cert-list .check { font-family: var(--mono); color: var(--accent); }
+  .cert-list .in-progress { font-family: var(--mono); font-size: 11.5px; color: var(--faint); border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px; margin-left: 6px; }
+
+  /* Projects */
+  .projects { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .project {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 22px;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .project:hover { border-color: var(--accent-dim); transform: translateY(-2px); }
+  .project .name { font-size: 16px; font-weight: 600; }
+  .project .desc { color: var(--faint); font-size: 13px; margin-top: 3px; }
+  .project .arrow { font-family: var(--mono); color: var(--accent); font-size: 18px; }
+  .note { color: var(--muted); max-width: 680px; margin-bottom: 28px; }
+  .note .note-link { color: var(--blue); font-family: var(--mono); font-size: 14px; }
+  .note .note-link:hover { color: var(--accent-bright); }
+
+  /* Honors */
+  .honors { display: flex; flex-wrap: wrap; gap: 12px; }
+  .honor {
+    font-family: var(--mono);
+    font-size: 13.5px;
+    color: var(--fg);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 10px 16px;
+  }
+
+  /* Contact */
+  .contact-links { display: flex; flex-wrap: wrap; gap: 12px 32px; }
+  .contact-links a {
+    font-family: var(--mono);
+    font-size: 16px;
+    color: var(--fg);
+    transition: color .15s ease;
+  }
+  .contact-links a:hover { color: var(--accent); }
+  .contact-links a .arr { color: var(--accent); margin-right: 6px; }
+  .contact-links a.mail { color: var(--blue); }
+  .contact-links a.mail:hover { color: var(--accent-bright); }
+
+  /* Footer */
+  footer { padding: 32px 0 40px; }
+  .footer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--faint);
+  }
+  .footer-row .clearance { color: var(--accent); }
+
+  /* Reveal animation */
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .prompt .cursor, .term-body .cursor { animation: none; }
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 860px) {
+    .hero-grid, .about-grid, .skills-grid, .edu-certs, .projects { grid-template-columns: 1fr; }
+    .hero { padding: 64px 0 56px; }
+    .hero-grid { gap: 40px; }
+    .exp-item { grid-template-columns: 1fr; gap: 8px; }
+    .nav-links { gap: 18px; }
+    .nav-links a:not(.nav-resume) { display: none; }
+    .footer-row { flex-direction: column; align-items: flex-start; }
+  }
+</style>
 </head>
 <body>
-    <header>
-        <h1>
-            Arthur Trapp
-        </h1>
-    </header>
-    <article id="Cryptography">
-        <h2>
-            Who I am
-        </h2>
-        <p>Current Cybersecurity Student at Rochester Institute of Technology. <br> Interested in artificial intelligence, penetration testing, and overall just solving problems.<br>
-            <a href="https://www.linkedin.com/in/arthurtrapp/">
-            Linkedin
-            </a>
-    </article><br>
-        <article id="Projects">
-                Projects
-                <p>
-                    <a href="main.html">BrickHack9 Project</a><br><br>
-                    <a href="https://phoenixltx.itch.io/friends-forever">Friends Forever Game</a><br><br>
-                    <a href="https://phoenixltx.itch.io/antibiotic-game">Antibiotic Game</a> <br> <br>
-                    <a href="https://github.com/The-Trapp/Nasa-Hunch-2022/tree/main">Nasa Hunch 2022 Code</a> <br> <br>
-                    <a href="https://github.com/The-Trapp/The-Trapp.github.io/tree/main">Website Code</a>
-                
-                </div> 
-                </p>
-            </article><br>
 
+<header>
+  <div class="wrap nav">
+    <a class="nav-brand" href="#top">arthur<span class="at">@</span>trapp</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#about">about</a>
+      <a href="#experience">experience</a>
+      <a href="#skills">skills</a>
+      <a href="#projects">projects</a>
+      <a href="htb/">writeups</a>
+      <a href="#contact">contact</a>
+      <a class="nav-resume" href="resume.pdf" download>resume</a>
+    </nav>
+  </div>
+</header>
 
-        <article id="Certifications">
-                Certifications
-                <p>
-                    <div><a href="https://www.coursera.org/account/accomplishments/professional-cert/GUUL2R5F2W34"> 
-                        <img src="assets\media\IBM-Logo.png"
-                         width="200" height="200" border="0" /> </a >
-    
-                    <a href="https://www.credly.com/earner/earned/badge/22c794c8-3083-4f90-a46e-e779496452cf"> 
-                        <img src="assets\media\ISC2 CC.png"
-                        width="200" height="200" border="0" /> </a> </div> 
-    
-                </p>
-        </article>
+<main id="top">
+  <!-- HERO -->
+  <div class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="prompt">$ whoami<span class="cursor">█</span></div>
+        <h1>Arthur<br />Trapp</h1>
+        <p class="role"><span class="accent">Cyber Warfare Officer</span> · Offensive Security Specialist</p>
+        <div class="hero-tags">
+          <span class="tag clearance">Active TS/SCI Clearance</span>
+          <span class="tag">M.S. AI @ UNC Charlotte</span>
+          <span class="tag">B.S. Cybersecurity @ RIT</span>
+          <span class="tag">CompTIA Security+</span>
+        </div>
+      </div>
+      <div class="terminal">
+        <div class="term-bar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="title">arthur@trapp: ~</span>
+        </div>
+        <div class="term-body" id="term"></div>
+      </div>
+    </div>
+  </div>
 
+  <!-- ABOUT -->
+  <section id="about">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>// ABOUT ME</h2>
+        <span class="count">01</span>
+      </div>
+      <div class="about-grid">
+        <div class="about reveal">
+          <p>I'm a <strong>Cyber Warfare Officer</strong> in the North Carolina Army National Guard and an offensive security specialist with an active TS/SCI clearance. I combine military operational leadership with a technical foundation spanning <strong>artificial intelligence</strong> and <strong>cybersecurity</strong>.</p>
+          <p>I spend most of my free time in labs breaking things on purpose — penetration testing, threat emulation, and vulnerability research — so I can learn how to defend the systems that actually matter.</p>
+          <p>Off the keyboard, I'm a semi-professional obstacle course racer who has competed in multiple world championships.</p>
+        </div>
+        <div class="reveal">
+          <ul class="focus-list">
+            <li><span class="num">01</span><span class="lbl">Penetration Testing</span></li>
+            <li><span class="num">02</span><span class="lbl">Offensive Security Engineering</span></li>
+            <li><span class="num">03</span><span class="lbl">Threat Emulation</span></li>
+            <li><span class="num">04</span><span class="lbl">Artificial Intelligence &amp; ML</span></li>
+          </ul>
+          <div class="lang-block">
+            <div class="lbl">LANGUAGES</div>
+            <div class="lang-pills">
+              <span>English — Native</span>
+              <span>French — Fluent</span>
+              <span>Spanish — Conversational</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXPERIENCE -->
+  <section id="experience">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>// EXPERIENCE</h2>
+        <span class="count">02</span>
+      </div>
+
+      <div class="exp-item reveal">
+        <div class="exp-when"><span class="now">May 2026 — Present</span><br/>Raleigh, NC</div>
+        <div>
+          <div class="exp-title">Cyber Warfare Officer</div>
+          <div class="exp-org">North Carolina Army National Guard</div>
+          <div class="exp-desc">Defend critical state agency infrastructure and enterprise communications by monitoring active threats and mitigating unauthorized intrusions. Execute vulnerability assessments and recommend countermeasures to reinforce network survivability.</div>
+        </div>
+      </div>
+
+      <div class="exp-item reveal">
+        <div class="exp-when"><span class="now">Sep 2026 — Present</span><br/>Charlotte, NC</div>
+        <div>
+          <div class="exp-title">Teaching Assistant — Software Development Capstone</div>
+          <div class="exp-org">UNC Charlotte</div>
+          <div class="exp-desc">Audit semester-long software architecture and source code for senior engineering capstone cohorts. Enforce secure software design patterns, dependency management standards, and Git version control workflows.</div>
+        </div>
+      </div>
+
+      <div class="exp-item reveal">
+        <div class="exp-when">Aug 2022 — May 2026<br/>Rochester, NY</div>
+        <div>
+          <div class="exp-title">Cadet Battalion Leader / Head of Training</div>
+          <div class="exp-org">Army ROTC</div>
+          <div class="exp-desc">Directed a 10-person operations staff to execute large-scale field exercises for 90+ personnel. Supervised a 4-person training cadre to conduct tactical readiness labs, mentoring junior cadets in high-pressure decision frameworks.</div>
+        </div>
+      </div>
+
+      <div class="exp-item reveal">
+        <div class="exp-when">Sep 2025 — Dec 2025<br/>Buffalo, NY</div>
+        <div>
+          <div class="exp-title">Cybersecurity Auditor &amp; Consultant</div>
+          <div class="exp-org">Rural Outreach Center</div>
+          <div class="exp-desc">Executed a comprehensive enterprise security audit and risk assessment, delivering a 3-year digital resilience and hardening roadmap. Benchmarked policies against HIPAA compliance standards and integrated two security platforms.</div>
+        </div>
+      </div>
+
+      <div class="exp-item reveal">
+        <div class="exp-when">Jul 2025 — Sep 2025<br/>Wiesbaden, DE</div>
+        <div>
+          <div class="exp-title">Signal Intern</div>
+          <div class="exp-org">U.S. Army Europe and Africa</div>
+          <div class="exp-desc">Evaluated high-availability tactical LAN/WAN architectures (SIPR/NIPR) sustaining theater-level joint mission command. Assessed tactical cryptographic mechanisms and secure transmission channels during multinational operations.</div>
+        </div>
+      </div>
+
+      <div class="exp-item reveal">
+        <div class="exp-when">May 2024 — Aug 2024<br/>Syracuse, NY</div>
+        <div>
+          <div class="exp-title">ITS End User Support Intern</div>
+          <div class="exp-org">New York State Insurance Fund (NYSIF)</div>
+          <div class="exp-desc">Resolved 400+ ServiceNow incidents and configured, secured, and deployed 100+ Windows 11 enterprise workstations. Audited endpoint inventories for 300+ systems in support of annual IT compliance reviews.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SKILLS -->
+  <section id="skills">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>// TECHNICAL SKILLS</h2>
+        <span class="count">03</span>
+      </div>
+      <div class="skills-grid">
+        <div class="skill-card reveal">
+          <h3>Offensive &amp; Defensive Cyber</h3>
+          <p>Penetration Testing<span class="sep">·</span>Threat Emulation<span class="sep">·</span>Vulnerability Assessment<span class="sep">·</span>Kali Linux<span class="sep">·</span>Wireshark<span class="sep">·</span>Metasploit<span class="sep">·</span>Nmap<span class="sep">·</span>Active Directory Security</p>
+        </div>
+        <div class="skill-card reveal">
+          <h3>Systems &amp; Infrastructure</h3>
+          <p>Windows Server<span class="sep">·</span>Windows 11<span class="sep">·</span>Linux (Kali, Ubuntu, RHEL)<span class="sep">·</span>VMware<span class="sep">·</span>VirtualBox<span class="sep">·</span>Tactical LAN/WAN (SIPR/NIPR)</p>
+        </div>
+        <div class="skill-card reveal">
+          <h3>Programming &amp; Analytics</h3>
+          <p>Python<span class="sep">·</span>Java<span class="sep">·</span>C<span class="sep">·</span>Bash<span class="sep">·</span>Machine Learning<span class="sep">·</span>AI Architectures<span class="sep">·</span>Git</p>
+        </div>
+        <div class="skill-card reveal">
+          <h3>Compliance &amp; Operations</h3>
+          <p>NIST CSF<span class="sep">·</span>NIST SP 800-30/37/39<span class="sep">·</span>HIPAA Compliance<span class="sep">·</span>Risk Assessments<span class="sep">·</span>IT Security Audits<span class="sep">·</span>ServiceNow</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EDUCATION + CERTS -->
+  <section id="education">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>// EDUCATION &amp; CERTS</h2>
+        <span class="count">04</span>
+      </div>
+      <div class="edu-certs">
+        <div class="reveal">
+          <div class="edu-item">
+            <div class="deg">M.S. in Artificial Intelligence</div>
+            <div class="school">University of North Carolina at Charlotte</div>
+            <div class="when">Expected May 2027 · Charlotte, NC</div>
+          </div>
+          <div class="edu-item">
+            <div class="deg">B.S. in Cybersecurity · Minor in Business Administration</div>
+            <div class="school">Rochester Institute of Technology</div>
+            <div class="when">Graduated May 2026 · Rochester, NY</div>
+            <div class="honor">Magna Cum Laude · Accepted into +1 MBA Program</div>
+          </div>
+          <div class="edu-item">
+            <div class="deg">High School Diploma</div>
+            <div class="school">Jesuit Dallas</div>
+            <div class="when">2018 – 2022 · Dallas, TX</div>
+          </div>
+        </div>
+        <div class="reveal">
+          <ul class="cert-list">
+            <li><span class="check">✔</span>CompTIA Security+ (SEC+)</li>
+            <li><span class="check">✔</span>ISC2 Certified in Cybersecurity (CC)</li>
+            <li><span class="check">✔</span>CompTIA AI Essentials</li>
+            <li><span class="check">✔</span>IBM Cybersecurity Analyst</li>
+            <li><span class="check">✔</span>CompTIA CySA+<span class="in-progress">IN PROGRESS</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROJECTS -->
+  <section id="projects">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>// PROJECTS</h2>
+        <span class="count">05</span>
+      </div>
+      <div class="projects">
+        <a class="project reveal" href="projects/brickhack9.html">
+          <div><div class="name">BrickHack 9 Project</div><div class="desc">Cryptography education webpage</div></div>
+          <span class="arrow">→</span>
+        </a>
+        <a class="project reveal" href="projects/antibiotic-game.html">
+          <div><div class="name">Antibiotic Game</div><div class="desc">Bacteria vs. antibody strategy game</div></div>
+          <span class="arrow">→</span>
+        </a>
+        <a class="project reveal" href="projects/friends-forever.html">
+          <div><div class="name">Friends Forever Game</div><div class="desc">itch.io game prototype</div></div>
+          <span class="arrow">→</span>
+        </a>
+        <a class="project reveal" href="projects/nasa-hunch.html">
+          <div><div class="name">NASA Hunch 2022</div><div class="desc">NASA Hunch Finalist project</div></div>
+          <span class="arrow">→</span>
+        </a>
+        <a class="project reveal" href="projects/website-code.html">
+          <div><div class="name">Website Code</div><div class="desc">Source for my original portfolio</div></div>
+          <span class="arrow">→</span>
+        </a>
+      </div>
+
+      <div class="section-head reveal" style="margin-top: 56px;">
+        <h2>// HONORS</h2>
+        <span class="count">06</span>
+      </div>
+      <div class="honors reveal">
+        <span class="honor">Elite Athlete (OCR) — World Championship Qualifier · 2024–2026</span>
+        <span class="honor">NASA Hunch Finalist · 2022</span>
+        <span class="honor">CyberStart America Semifinalist · 2021</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HACK THE BOX -->
+  <section id="htb">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>// HACK THE BOX</h2>
+        <span class="count">07</span>
+      </div>
+      <p class="note reveal">Full attack-chain writeups for retired Hack The Box machines I've owned — from initial recon to root. <a class="note-link" href="https://app.hackthebox.com/users/1517323" target="_blank" rel="noopener">→ view my HTB profile</a></p>
+      <div class="projects">
+        <a class="project reveal" href="htb/cohort.html">
+          <div><div class="name">Cohort</div><div class="desc">SSRF → Marimo WebSocket RCE → PackageKit TOCTOU</div></div>
+          <span class="arrow">→</span>
+        </a>
+        <a class="project reveal" href="htb/management.html">
+          <div><div class="name">Management</div><div class="desc">OpenAM deserialization RCE → GLPI decryption</div></div>
+          <span class="arrow">→</span>
+        </a>
+        <a class="project reveal" href="htb/nexus.html">
+          <div><div class="name">Nexus</div><div class="desc">Git-history leak → TinyMCE upload RCE → path traversal</div></div>
+          <span class="arrow">→</span>
+        </a>
+        <a class="project reveal" href="htb/orion.html">
+          <div><div class="name">Orion</div><div class="desc">Craft CMS object-injection RCE → telnetd bypass</div></div>
+          <span class="arrow">→</span>
+        </a>
+        <a class="project reveal" href="htb/twomillion.html">
+          <div><div class="name">TwoMillion</div><div class="desc">API mass-assignment → command injection → kernel exploit</div></div>
+          <span class="arrow">→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>// CONTACT</h2>
+        <span class="count">08</span>
+      </div>
+      <div class="contact-links reveal">
+        <a href="https://github.com/The-Trapp" target="_blank" rel="noopener"><span class="arr">→</span>github.com/The-Trapp</a>
+        <a href="https://www.linkedin.com/in/arthurtrapp/" target="_blank" rel="noopener"><span class="arr">→</span>linkedin.com/in/arthurtrapp</a>
+        <a class="mail" href="mailto:arthur.trapp4@gmail.com"><span class="arr">→</span>arthur.trapp4@gmail.com</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap footer-row">
+    <span>© 2026 Arthur Trapp · Rochester, NY</span>
+    <span class="clearance">ACTIVE TS/SCI CLEARANCE</span>
+  </div>
+</footer>
+
+<script>
+  // Terminal typing animation
+  const termLines = [
+    { type: 'cmd',  text: '$ whoami' },
+    { type: 'out',  text: 'arthur-trapp' },
+    { type: 'cmd',  text: '$ cat security.txt' },
+    { type: 'out',  text: 'Cyber Warfare Officer' },
+    { type: 'out',  text: 'Active TS/SCI Clearance' },
+    { type: 'cmd',  text: '$ ./skills --top' },
+    { type: 'ok',   text: '[*] Penetration Testing' },
+    { type: 'ok',   text: '[*] Threat Emulation' },
+    { type: 'ok',   text: '[*] Vulnerability Assessment' },
+    { type: 'out',  text: 'Python | Bash | C | Java' },
+  ];
+
+  const term = document.getElementById('term');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (reduceMotion) {
+    termLines.forEach(l => {
+      const d = document.createElement('div');
+      d.className = 'line t-' + l.type;
+      d.textContent = l.text;
+      term.appendChild(d);
+    });
+  } else {
+    let li = 0, ci = 0;
+    const clsMap = { cmd: 't-cmd', out: 't-out', ok: 't-ok' };
+
+    function typeLine() {
+      if (li >= termLines.length) return;
+      const line = termLines[li];
+      const div = document.createElement('div');
+      div.className = 'line ' + clsMap[line.type];
+      term.appendChild(div);
+      ci = 0;
+      (function typeChar() {
+        if (ci < line.text.length) {
+          div.textContent = line.text.slice(0, ++ci);
+          setTimeout(typeChar, 14 + Math.random() * 26);
+        } else {
+          li++;
+          setTimeout(typeLine, 140);
+        }
+      })();
+    }
+    typeLine();
+  }
+
+  // Reveal on scroll
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.reveal').forEach(el => {
+    if (reduceMotion) { el.classList.add('visible'); }
+    else { io.observe(el); }
+  });
+</script>
 </body>
 </html>

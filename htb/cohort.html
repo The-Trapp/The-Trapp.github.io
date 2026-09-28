@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cohort — HTB Writeup · Arthur Trapp</title>
+<meta name="description" content="SSRF → Marimo pre-auth WebSocket RCE (CVE-2026-39987) → PackageKit TOCTOU (CVE-2026-41651)" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23181a1e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="nav-brand" href="../index.html">arthur<span class="at">@</span>trapp</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#projects">projects</a>
+      <a class="active" href="index.html">writeups</a>
+      <a href="../index.html#contact">contact</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page-hero">
+    <div class="wrap">
+      <div class="crumb"><a href="../index.html">~</a> / <a href="index.html">writeups</a> / cohort</div>
+      <h1>Cohort</h1>
+      <p class="sub">Hack The Box · <span class="accent">Easy</span> · Linux</p>
+      <div class="meta-tags">
+        <span class="green">Easy</span>
+        <span>Linux</span>
+        <span class="accent">User + Root owned</span>
+      </div>
+    </div>
+  </div>
+  <article class="content wrap">
+<h2>Machine Overview</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Name</td>
+<td>Cohort</td>
+</tr>
+<tr>
+<td>Difficulty</td>
+<td>Easy</td>
+</tr>
+<tr>
+<td>OS</td>
+<td>Linux (Ubuntu, nginx 1.24.0)</td>
+</tr>
+<tr>
+<td>IP</td>
+<td>10.129.146.191</td>
+</tr>
+<tr>
+<td>Vhosts</td>
+<td><code>cohort.htb</code> (portal), <code>nb-1be3782a8afd3ad5.cohort.htb</code> (internal Marimo)</td>
+</tr>
+<tr>
+<td>Key components</td>
+<td>Flask "cohort-insights" API (127.0.0.1:5000), Marimo 0.20.4 (127.0.0.1:8888), PackageKit 1.2.8</td>
+</tr>
+<tr>
+<td>Open ports</td>
+<td>22 (SSH OpenSSH 9.6p1), 80/443 (nginx; <code>*.cohort.htb</code> wildcard cert)</td>
+</tr>
+</tbody>
+</table></div>
+<h2>Flags</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Path</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>User</td>
+<td><code>/home/marimo/user.txt</code></td>
+<td><code>ac917564ef8ade9b37dab35550f902c3</code></td>
+</tr>
+<tr>
+<td>Root</td>
+<td><code>/root/root.txt</code></td>
+<td><code>548cbc37b7c8f27cb642479ee1f3e7cd</code></td>
+</tr>
+</tbody>
+</table></div>
+<h2>Attack Chain</h2>
+<h3>1. Reconnaissance</h3>
+<ul>
+<li><code>nmap -p- --min-rate 5000</code> → 22 (SSH) + 80/443 (nginx). Domain <code>cohort.htb</code>, wildcard <code>*.cohort.htb</code> cert.</li>
+<li>Directory enumeration → <code>portal.html</code> (a "validate source URL" feature), <code>assets/app.js</code> (obfuscated), <code>/status</code> and <code>/assets/</code> return 403 externally.</li>
+</ul>
+<h3>2. SSRF via URL-validation feature</h3>
+<ul>
+<li><code>POST /api/validate</code> with <code>{"url": "...", "format": "json"}</code> fetches a user-supplied URL server-side.</li>
+<li>The loopback blocklist only matches <code>localhost</code>/<code>127.0.0.1</code> by name. Bypassed with alternate representations:</li>
+<li>decimal: <code>http://2130706433/status</code> (2130706433 = 0x7F000001)</li>
+<li>hex: <code>http://0x7F.0x00.0x00.0x01/</code></li>
+<li>short: <code>http://127.1/</code></li>
+<li>Abused the SSRF to hit nginx's internal <code>/status</code> endpoint → leaked the upstream map, including an <strong>internal Marimo notebook vhost</strong>: <code>nb-1be3782a8afd3ad5.cohort.htb</code> → <code>127.0.0.1:8888</code>.</li>
+</ul>
+<h3>3. Marimo enumeration</h3>
+<ul>
+<li><code>/api/version</code> → <strong>Marimo 0.20.4</strong>.</li>
+<li>Confirmed the vhost is also reachable <em>externally</em> (nginx reverse-proxies <code>Host: nb-…cohort.htb</code> to 127.0.0.1:8888).</li>
+</ul>
+<h3>4. Initial Access — CVE-2026-39987 (Marimo pre-auth WebSocket RCE)</h3>
+<ul>
+<li>Marimo's <code>/terminal/ws</code> WebSocket endpoint skips <code>validate_auth()</code> (other endpoints like <code>/ws</code> enforce it), so an unauthenticated client gets a full PTY shell as the <code>marimo</code> user.</li>
+<li>Connected with <code>websocket-client</code> (<code>wss://nb-1be3782a8afd3ad5.cohort.htb/terminal/ws</code>, cert ignored + DNS override), dropped straight into a <code>marimo@cohort</code> shell.</li>
+</ul>
+<h3>5. User Flag</h3>
+<ul>
+<li><code>cat /home/marimo/user.txt</code> → <strong><code>ac917564ef8ade9b37dab35550f902c3</code></strong>.</li>
+</ul>
+<h3>6. Privilege Escalation — CVE-2026-41651 (PackageKit "Pack2TheRoot" TOCTOU)</h3>
+<ul>
+<li><code>dpkg -l | grep packagekit</code> → <strong>PackageKit 1.2.8</strong> (vulnerable range 1.0.2–1.3.4).</li>
+<li>PoC (<code>mawussid/CVE-2026-41651-Python</code>) abuses a TOCTOU in PackageKit's D-Bus transaction handling:
+  1. <code>InstallFiles(SIMULATE, dummy.deb)</code> — polkit bypassed, idle queued.
+  2. <code>InstallFiles(NONE, payload.deb)</code> — cached transaction overwritten.
+  3. GLib idle fires → <code>pk_transaction_run</code> reads the overwritten payload → <code>postinst</code> runs as root → drops a SUID <code>bash</code>.</li>
+<li>Ran <code>python3 cve-2026-41651.py --exec 'cat /root/root.txt'</code> → <strong>root flag</strong> <code>548cbc37b7c8f27cb642479ee1f3e7cd</code> (verified <code>euid=0</code> via <code>/tmp/.suid_bash -p -c id</code>).</li>
+</ul>
+<h2>Techniques Demonstrated</h2>
+<ol>
+<li>Directory/content enumeration → hidden portal</li>
+<li>SSRF with loopback-blocklist bypass (decimal/hex/short IP representations)</li>
+<li>Internal nginx status endpoint disclosure (upstream map → internal vhost)</li>
+<li>Reverse-proxy vhost pivoting (reaching a loopback-bound service over its vhost name)</li>
+<li>Pre-auth WebSocket RCE (CVE-2026-39987, Marimo <code>/terminal/ws</code>)</li>
+<li>PackageKit TOCTOU race → SUID binary (CVE-2026-41651, Pack2TheRoot)</li>
+</ol>
+<h2>Tools Used</h2>
+<p><code>nmap</code>, <code>curl</code>, Python 3 (<code>requests</code>/<code>websocket-client</code>), <code>cve-2026-39987</code> terminal WebSocket PoC, <code>CVE-2026-41651-Python</code> (Pack2TheRoot) PoC.</p>
+    <a class="back-link" href="index.html">← all writeups</a>
+  </article>
+</main>
+<footer>
+  <div class="wrap footer-row">
+    <span>© 2026 Arthur Trapp · Rochester, NY</span>
+    <span class="clearance">ACTIVE TS/SCI CLEARANCE</span>
+  </div>
+</footer>
+<script>
+  const io = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.content h2, .content h3, .content p, .content pre, .content table, .content ul, .content ol, .content blockquote').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
