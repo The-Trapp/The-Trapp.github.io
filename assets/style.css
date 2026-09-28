@@ -20,7 +20,13 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 84px; }
 body {
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(1100px 620px at 12% -4%, rgba(247,156,66,0.08), transparent 62%),
+    radial-gradient(900px 520px at 100% 108%, rgba(122,162,247,0.06), transparent 60%),
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 46px 46px, 46px 46px;
   color: var(--fg);
   font-family: var(--sans);
   font-size: 16px;
