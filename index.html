@@ -74,7 +74,7 @@
     font-weight: 500;
     color: var(--fg);
   }
-  .nav-brand .at { color: var(--accent); }
+  .nav-brand .logo { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; margin-right: 9px; font-family: var(--mono); font-size: 11px; font-weight: 700; color: #14161a; background: var(--accent); border-radius: 5px; }
   .nav-links { display: flex; gap: 28px; align-items: center; }
   .nav-links a {
     font-family: var(--mono);
@@ -376,7 +376,7 @@
 
 <header>
   <div class="wrap nav">
-    <a class="nav-brand" href="#top">arthur<span class="at">@</span>trapp</a>
+    <a class="nav-brand" href="#top"><span class="logo">AT</span>arthur_trapp</a>
     <nav class="nav-links" aria-label="Primary">
       <a href="#about">about</a>
       <a href="#experience">experience</a>
@@ -394,7 +394,7 @@
   <div class="hero">
     <div class="wrap hero-grid">
       <div>
-        <div class="prompt">$ whoami<span class="cursor">█</span></div>
+        <div class="prompt">❯ whois arthur_trapp<span class="cursor">█</span></div>
         <h1>Arthur<br />Trapp</h1>
         <p class="role"><span class="accent">Cyber Warfare Officer</span> · Offensive Security Specialist</p>
         <div class="hero-tags">
@@ -407,7 +407,7 @@
       <div class="terminal">
         <div class="term-bar">
           <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-          <span class="title">arthur@trapp: ~</span>
+          <span class="title">arthur_trapp:~</span>
         </div>
         <div class="term-body" id="term"></div>
       </div>
@@ -418,7 +418,7 @@
   <section id="about">
     <div class="wrap">
       <div class="section-head reveal">
-        <h2>// ABOUT ME</h2>
+        <h2>:: ABOUT ME</h2>
         <span class="count">01</span>
       </div>
       <div class="about-grid">
@@ -451,7 +451,7 @@
   <section id="experience">
     <div class="wrap">
       <div class="section-head reveal">
-        <h2>// EXPERIENCE</h2>
+        <h2>:: EXPERIENCE</h2>
         <span class="count">02</span>
       </div>
 
@@ -515,7 +515,7 @@
   <section id="skills">
     <div class="wrap">
       <div class="section-head reveal">
-        <h2>// TECHNICAL SKILLS</h2>
+        <h2>:: TECHNICAL SKILLS</h2>
         <span class="count">03</span>
       </div>
       <div class="skills-grid">
@@ -543,7 +543,7 @@
   <section id="education">
     <div class="wrap">
       <div class="section-head reveal">
-        <h2>// EDUCATION &amp; CERTS</h2>
+        <h2>:: EDUCATION &amp; CERTS</h2>
         <span class="count">04</span>
       </div>
       <div class="edu-certs">
@@ -582,38 +582,38 @@
   <section id="projects">
     <div class="wrap">
       <div class="section-head reveal">
-        <h2>// PROJECTS</h2>
+        <h2>:: PROJECTS</h2>
         <span class="count">05</span>
       </div>
       <div class="projects">
         <a class="project reveal" href="projects/cyber-exercise.html">
           <div><div class="name">Cyber Exercise (MDO '26)</div><div class="desc">Large-scale red-team exercise for 30+ cadets</div></div>
-          <span class="arrow">→</span>
+          <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="projects/brickhack9.html">
           <div><div class="name">BrickHack 9 Project</div><div class="desc">Cryptography education webpage</div></div>
-          <span class="arrow">→</span>
+          <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="projects/antibiotic-game.html">
           <div><div class="name">Antibiotic Game</div><div class="desc">Bacteria vs. antibody strategy game</div></div>
-          <span class="arrow">→</span>
+          <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="projects/friends-forever.html">
           <div><div class="name">Friends Forever Game</div><div class="desc">itch.io game prototype</div></div>
-          <span class="arrow">→</span>
+          <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="projects/nasa-hunch.html">
           <div><div class="name">NASA Hunch 2022</div><div class="desc">NASA Hunch Finalist project</div></div>
-          <span class="arrow">→</span>
+          <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="projects/website-code.html">
           <div><div class="name">Website Code</div><div class="desc">Source for my original portfolio</div></div>
-          <span class="arrow">→</span>
+          <span class="arrow">↳</span>
         </a>
       </div>
 
       <div class="section-head reveal" style="margin-top: 56px;">
-        <h2>// HONORS</h2>
+        <h2>:: HONORS</h2>
         <span class="count">06</span>
       </div>
       <div class="honors reveal">
@@ -628,38 +628,38 @@
   <section id="htb">
     <div class="wrap">
       <div class="section-head reveal">
-        <h2>// HACK THE BOX</h2>
+        <h2>:: HACK THE BOX</h2>
         <span class="count">07</span>
       </div>
-      <p class="note reveal">Full attack-chain writeups for retired Hack The Box machines I've owned — from initial recon to root. <a class="note-link" href="https://app.hackthebox.com/users/1517323" target="_blank" rel="noopener">→ view my HTB profile</a></p>
+      <p class="note reveal">Full attack-chain writeups for retired Hack The Box machines I've owned — from initial recon to root. <a class="note-link" href="https://app.hackthebox.com/users/1517323" target="_blank" rel="noopener">↳ view my HTB profile</a></p>
       <div class="projects">
         <a class="project reveal" href="htb/cohort.html">
           <div><div class="name">Cohort</div><div class="desc">SSRF → Marimo WebSocket RCE → PackageKit TOCTOU</div></div>
-          <span class="arrow">→</span>
+          <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="htb/enigma.html">
           <div><div class="name">Enigma</div><div class="desc">NFS → Roundcube → OpenSTAManager RCE → OliveTin</div></div>
-          <span class="arrow">→</span>
+          <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="htb/management.html">
           <div><div class="name">Management</div><div class="desc">OpenAM deserialization RCE → GLPI decryption</div></div>
-          <span class="arrow">→</span>
+          <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="htb/nexus.html">
           <div><div class="name">Nexus</div><div class="desc">Git-history leak → TinyMCE upload RCE → path traversal</div></div>
-          <span class="arrow">→</span>
+          <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="htb/orion.html">
           <div><div class="name">Orion</div><div class="desc">Craft CMS object-injection RCE → telnetd bypass</div></div>
-          <span class="arrow">→</span>
+          <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="htb/paperwork.html">
           <div><div class="name">Paperwork</div><div class="desc">LPD injection → JetDirect traversal → SCM_RIGHTS leak</div></div>
-          <span class="arrow">→</span>
+          <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="htb/twomillion.html">
           <div><div class="name">TwoMillion</div><div class="desc">API mass-assignment → command injection → kernel exploit</div></div>
-          <span class="arrow">→</span>
+          <span class="arrow">↳</span>
         </a>
       </div>
     </div>
@@ -669,13 +669,13 @@
   <section id="contact">
     <div class="wrap">
       <div class="section-head reveal">
-        <h2>// CONTACT</h2>
+        <h2>:: CONTACT</h2>
         <span class="count">08</span>
       </div>
       <div class="contact-links reveal">
-        <a href="https://github.com/The-Trapp" target="_blank" rel="noopener"><span class="arr">→</span>github.com/The-Trapp</a>
-        <a href="https://www.linkedin.com/in/arthurtrapp/" target="_blank" rel="noopener"><span class="arr">→</span>linkedin.com/in/arthurtrapp</a>
-        <a class="mail" href="mailto:arthur.trapp4@gmail.com"><span class="arr">→</span>arthur.trapp4@gmail.com</a>
+        <a href="https://github.com/The-Trapp" target="_blank" rel="noopener"><span class="arr">↳</span>github.com/The-Trapp</a>
+        <a href="https://www.linkedin.com/in/arthurtrapp/" target="_blank" rel="noopener"><span class="arr">↳</span>linkedin.com/in/arthurtrapp</a>
+        <a class="mail" href="mailto:arthur.trapp4@gmail.com"><span class="arr">↳</span>arthur.trapp4@gmail.com</a>
       </div>
     </div>
   </section>
@@ -691,16 +691,15 @@
 <script>
   // Terminal typing animation
   const termLines = [
-    { type: 'cmd',  text: '$ whoami' },
-    { type: 'out',  text: 'arthur-trapp' },
-    { type: 'cmd',  text: '$ cat security.txt' },
-    { type: 'out',  text: 'Cyber Warfare Officer' },
-    { type: 'out',  text: 'Active TS/SCI Clearance' },
-    { type: 'cmd',  text: '$ ./skills --top' },
+    { type: 'cmd',  text: '❯ whois arthur_trapp' },
+    { type: 'out',  text: 'name:        Arthur Trapp' },
+    { type: 'out',  text: 'role:        Cyber Warfare Officer' },
+    { type: 'out',  text: 'clearance:   TS/SCI' },
+    { type: 'out',  text: 'status:      offensive security' },
     { type: 'ok',   text: '[*] Penetration Testing' },
     { type: 'ok',   text: '[*] Threat Emulation' },
     { type: 'ok',   text: '[*] Vulnerability Assessment' },
-    { type: 'out',  text: 'Python | Bash | C | Java' },
+    { type: 'out',  text: 'python · bash · c · java' },
   ];
 
   const term = document.getElementById('term');
