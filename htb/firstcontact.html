@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>First Contact — HTB Writeup · Arthur Trapp</title>
+<meta name="description" content="Satellite pass prediction — Skyfield SGP4 + pwntools automation" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232c3b4d'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="nav-brand" href="../index.html"><span class="logo">AT</span>arthur_trapp</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#projects">projects</a>
+      <a class="active" href="index.html">writeups</a>
+      <a href="../index.html#contact">contact</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page-hero">
+    <div class="wrap">
+      <div class="crumb"><a href="../index.html">~</a> / <a href="index.html">writeups</a> / firstcontact</div>
+      <h1>First Contact</h1>
+      <p class="sub">Hack The Box · <span class="accent">Easy</span> · Satellite</p>
+      <div class="meta-tags">
+        <span class="green">Easy</span>
+        <span>Satellite</span>
+        <span class="accent">Challenge</span>
+      </div>
+    </div>
+  </div>
+  <article class="content wrap">
+<h2>Challenge Overview</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Name</td>
+<td>First Contact</td>
+</tr>
+<tr>
+<td>Category</td>
+<td>Satellite (orbital mechanics / scripting)</td>
+</tr>
+<tr>
+<td>Difficulty</td>
+<td>Easy (challenge 1 of 9 in the HTB Satellite Exploitation Track)</td>
+</tr>
+<tr>
+<td>Event</td>
+<td>HTB Satellite Exploitation Track</td>
+</tr>
+<tr>
+<td>Connection</td>
+<td><code>nc 154.57.164.69 32055</code></td>
+</tr>
+<tr>
+<td>Objective</td>
+<td>Compute a satellite's next visibility window from its TLE + ground-station coordinates</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Attack surface summary:</strong> An interactive netcat service that, each round, prints a satellite's two-line element (TLE) set and a ground station's <code>(Lat,Long)</code>, then asks <em>"When will it be visible next?"</em>. The correct answer is the next pass window (rise → set) where the satellite's elevation exceeds a threshold (30°) over the station. Answer every round correctly and the service prints the flag.</p>
+<h2>Flag</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First Contact</td>
+<td><code>[REDACTED]</code></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2>Analysis</h2>
+<p>Initial reconnaissance of the service:</p>
+<pre><code class="language-bash">nc 154.57.164.69 32055
+# ...prints a satellite TLE (two lines), a ground-station (Lat,Long), and...
+# When will it be visible next?&gt;
+</code></pre>
+<p>Doing this math by hand is impractical for multiple rounds, so the solve is automated:</p>
+<ol>
+<li>Parse the TLE and coordinates out of each prompt.</li>
+<li>Load them into <strong>Skyfield</strong> (<code>EarthSatellite</code> + <code>Topos</code>).</li>
+<li>Use <code>find_events(..., altitude_degrees=30.0)</code> to locate rise/set events over the next 24h.</li>
+<li>Format each rise→set pair as <code>YYYY-MM-DDTHH:MM:SSZ</code> windows and send them back.</li>
+<li>Loop with <strong>pwntools</strong> until the service dumps the flag.</li>
+</ol>
+<pre><code class="language-bash">pip install skyfield pwntools
+</code></pre>
+<hr />
+<h2>Attack Chain</h2>
+<h3>1. Recon the service</h3>
+<pre><code class="language-bash">nc 154.57.164.69 32055
+# -&gt; noticed it asks &quot;When will it be visible next?&quot; and supplies a TLE + (Lat,Long)
+</code></pre>
+<h3>2. Automate the satellite pass calculation</h3>
+<p>The solver (full script in <code>solve.py</code>) parses the TLE lines and coordinates with regex, then:</p>
+<pre><code class="language-python">satellite     = EarthSatellite(line1, line2, f&quot;SAT_{round_num}&quot;, ts)
+ground_station = Topos(latitude_degrees=lat, longitude_degrees=lon)
+
+t, events = satellite.find_events(ground_station, t0, t1, altitude_degrees=30.0)
+# event == 0 -&gt; satellite rises above 30°
+# event == 2 -&gt; satellite sets below 30°
+</code></pre>
+<p>Each rise/set pair is grouped into a <code>"&lt;rise&gt; &lt;set&gt;"</code> window and sent back:</p>
+<pre><code class="language-text">2024-10-02T14:23:11Z 2024-10-02T14:28:44Z
+</code></pre>
+<h3>3. Read the flag</h3>
+<p>After all rounds are answered, the connection stays open and the service prints the flag:</p>
+<pre><code class="language-text">[REDACTED]
+</code></pre>
+<hr />
+<h2>Techniques Demonstrated</h2>
+<ol>
+<li><strong>Interactive netcat service reconnaissance</strong> — manual <code>nc</code> to understand the challenge protocol.</li>
+<li><strong>Automated protocol interaction</strong> — <code>pwntools</code> <code>remote()</code> loop that reads prompts and answers programmatically.</li>
+<li><strong>Orbital mechanics / pass prediction</strong> — Skyfield (SGP4) to compute satellite visibility windows above a 30° elevation mask.</li>
+<li><strong>TLE parsing</strong> — regex extraction of two-line element sets and ground-station coordinates.</li>
+</ol>
+<h2>Tools Used</h2>
+<p><code>nc</code> (netcat), Python 3, <code>pwntools</code>, <code>skyfield</code>.</p>
+    <a class="back-link" href="index.html">← all writeups</a>
+  </article>
+</main>
+<footer>
+  <div class="wrap footer-row">
+    <span>© 2026 Arthur Trapp · Rochester, NY</span>
+    <span class="clearance">ACTIVE TS/SCI CLEARANCE</span>
+  </div>
+</footer>
+<script>
+  const io = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.content h2, .content h3, .content p, .content pre, .content table, .content ul, .content ol, .content blockquote').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

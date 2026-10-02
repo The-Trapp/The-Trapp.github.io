@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flag Command — HTB Writeup · Arthur Trapp</title>
+<meta name="description" content="Sensitive info disclosure via unprotected /api/options" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232c3b4d'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="nav-brand" href="../index.html"><span class="logo">AT</span>arthur_trapp</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#projects">projects</a>
+      <a class="active" href="index.html">writeups</a>
+      <a href="../index.html#contact">contact</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page-hero">
+    <div class="wrap">
+      <div class="crumb"><a href="../index.html">~</a> / <a href="index.html">writeups</a> / flagcommand</div>
+      <h1>Flag Command</h1>
+      <p class="sub">Hack The Box · <span class="accent">Very Easy</span> · Web</p>
+      <div class="meta-tags">
+        <span class="green">Very Easy</span>
+        <span>Web</span>
+        <span class="accent">Challenge</span>
+      </div>
+    </div>
+  </div>
+  <article class="content wrap">
+<h2>Challenge Overview</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Name</td>
+<td>Flag Command</td>
+</tr>
+<tr>
+<td>Category</td>
+<td>Web</td>
+</tr>
+<tr>
+<td>Difficulty</td>
+<td>Very Easy</td>
+</tr>
+<tr>
+<td>Event</td>
+<td>Cyber Apocalypse 2024</td>
+</tr>
+<tr>
+<td>Type</td>
+<td>Black-box web app — terminal-style "Dimensional Escape Quest" text adventure</td>
+</tr>
+<tr>
+<td>Vulnerability</td>
+<td>Sensitive information disclosure via unprotected <code>/api/options</code> endpoint</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Attack surface summary:</strong> A browser game that presents a terminal prompt and a branching text adventure. The flag is gated behind a <em>secret</em> command that is only revealed by the backend <code>/api/options</code> endpoint and triggered via <code>POST /api/monitor</code>.</p>
+<h2>Flag</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Flag Command</td>
+<td><code>[REDACTED]</code></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2>Analysis</h2>
+<p>Opening the app shows a terminal prompt (<code>&gt;&gt; start</code>). Intercepting traffic (Burp Suite / mitmproxy) exposes the client-side JS and one key API endpoint:</p>
+<ul>
+<li><code>/static/terminal/js/main.js</code></li>
+<li><code>/static/terminal/js/game.js</code></li>
+<li><code>/static/terminal/js/commands.js</code></li>
+<li><code>GET /api/options</code></li>
+</ul>
+<p>Source review of <code>main.js</code> shows the win path: if the player's <code>currentCommand</code> equals the <em>secret</em> option returned by the backend, the app POSTs it to <code>/api/monitor</code> as JSON <code>{"command": currentCommand}</code> — which returns the flag.</p>
+<p>The unprotected <code>GET /api/options</code> endpoint leaks the hidden secret command:</p>
+<pre><code class="language-bash">curl -s http://&lt;ip&gt;:&lt;port&gt;/api/options
+# { &quot;allPossibleCommands&quot;: { &quot;...story options...&quot; },
+#   &quot;secret&quot;: &quot;Blip-blop, in a pickle with a hiccup! Shmiggity-shmack&quot; }
+</code></pre>
+<hr />
+<h2>Attack Chain</h2>
+<h3>1. Map the application</h3>
+<p>Open the web app, note the terminal prompt, and start the game with <code>start</code>. Enumerate the loaded assets via the Network tab / proxy history.</p>
+<h3>2. Review client-side JavaScript</h3>
+<p>Trace <code>main.js</code> → <code>game.js</code> → <code>commands.js</code>. <code>main.js</code> imports <code>playerWon()</code> (which prints the <code>GAME_WON</code> string), but the trigger condition lives in the option-check that POSTs a secret command.</p>
+<h3>3. Pull the secret from <code>/api/options</code></h3>
+<pre><code class="language-bash">curl -s http://&lt;ip&gt;:&lt;port&gt;/api/options
+# ... &quot;secret&quot;: &quot;Blip-blop, in a pickle with a hiccup! Shmiggity-shmack&quot; ...
+</code></pre>
+<h3>4. Submit the secret to <code>/api/monitor</code></h3>
+<pre><code class="language-bash">curl -s -X POST http://&lt;ip&gt;:&lt;port&gt;/api/monitor \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;command&quot;:&quot;Blip-blop, in a pickle with a hiccup! Shmiggity-shmack&quot;}'
+# {&quot;message&quot;: &quot;[REDACTED]&quot;}
+</code></pre>
+<hr />
+<h2>Techniques Demonstrated</h2>
+<ol>
+<li><strong>Client-side JavaScript source review</strong> — traced the win logic across <code>main.js</code> / <code>game.js</code> / <code>commands.js</code>.</li>
+<li><strong>HTTP traffic / API endpoint mapping</strong> — discovered <code>/api/options</code> and <code>/api/monitor</code> from the app's own requests.</li>
+<li><strong>Sensitive information disclosure</strong> — unprotected <code>/api/options</code> leaks a hidden "secret" command that unlocks the flag.</li>
+</ol>
+<h2>Tools Used</h2>
+<p>Browser DevTools / Burp Suite (or mitmproxy), <code>curl</code>.</p>
+    <a class="back-link" href="index.html">← all writeups</a>
+  </article>
+</main>
+<footer>
+  <div class="wrap footer-row">
+    <span>© 2026 Arthur Trapp · Rochester, NY</span>
+    <span class="clearance">ACTIVE TS/SCI CLEARANCE</span>
+  </div>
+</footer>
+<script>
+  const io = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.content h2, .content h3, .content p, .content pre, .content table, .content ul, .content ol, .content blockquote').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

