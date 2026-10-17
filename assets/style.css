@@ -71,6 +71,7 @@ header {
 }
 .meta-tags span.accent { color: var(--accent); border-color: var(--accent-dim); }
 .meta-tags span.green { color: var(--green); border-color: color-mix(in srgb, var(--green) 40%, transparent); }
+.meta-tags span.red { color: var(--red); border-color: color-mix(in srgb, var(--red) 45%, transparent); }
 
 /* Body content */
 .content { padding: 48px 0 64px; }
@@ -165,6 +166,7 @@ footer { padding: 32px 0 44px; border-top: 1px solid var(--border); }
 .writeup-card .name { font-size: 17px; font-weight: 600; }
 .writeup-card .meta { font-family: var(--mono); font-size: 12.5px; color: var(--faint); margin-top: 4px; }
 .writeup-card .meta .diff { color: var(--green); }
+.writeup-card .meta .diff.hard { color: var(--red); }
 .writeup-card .arrow { font-family: var(--mono); color: var(--accent); font-size: 20px; }
 
 /* Project page body */

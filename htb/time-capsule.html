@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Time Capsule — HTB Writeup · Arthur Trapp</title>
+<meta name="description" content="Håstad broadcast attack — small-e RSA with message reuse" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232c3b4d'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="nav-brand" href="../index.html"><span class="logo">AT</span>arthur_trapp</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#projects">projects</a>
+      <a class="active" href="index.html">writeups</a>
+      <a href="../index.html#contact">contact</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page-hero">
+    <div class="wrap">
+      <div class="crumb"><a href="../index.html">~</a> / <a href="index.html">writeups</a> / time-capsule</div>
+      <h1>Time Capsule</h1>
+      <p class="sub">Hack The Box · <span class="accent">Easy</span> · Cryptography</p>
+      <div class="meta-tags">
+        <span class="green">Easy</span>
+        <span>Cryptography</span>
+        <span class="accent">Challenge</span>
+      </div>
+    </div>
+  </div>
+  <article class="content wrap">
+<h2>1. Challenge Overview</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Category</strong></td>
+<td>Cryptography</td>
+</tr>
+<tr>
+<td><strong>Challenge name</strong></td>
+<td>Time Capsule (Qubit Enterprises)</td>
+</tr>
+<tr>
+<td><strong>Target</strong></td>
+<td><code>154.57.164.69:35473</code> (TCP)</td>
+</tr>
+<tr>
+<td><strong>Vulnerability class</strong></td>
+<td>Low-exponent RSA — Håstad's broadcast attack</td>
+</tr>
+<tr>
+<td><strong>Difficulty</strong></td>
+<td>Easy</td>
+</tr>
+<tr>
+<td><strong>Flag</strong></td>
+<td><code>[REDACTED]</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Summary.</strong> The service implements textbook RSA encryption with a public exponent of <code>e = 5</code>. It reuses the <em>same</em> plaintext (the flag) for every encryption while generating a <em>fresh</em> 1024-bit modulus each time. Collecting two ciphertexts and combining them with the Chinese Remainder Theorem (CRT) recovers <code>m^5</code> exactly, after which an integer 5th root yields the flag. No factoring is required.</p>
+<hr />
+<h2>2. Provided Source Code</h2>
+<pre><code class="language-python">from Crypto.Util.number import bytes_to_long, getPrime
+import socketserver
+import json
+
+FLAG = b'[REDACTED]'
+
+class TimeCapsule():
+    def __init__(self, msg):
+        self.msg = msg
+        self.bit_size = 1024
+        self.e = 5
+
+    def _get_new_pubkey(self):
+        while True:
+            p = getPrime(self.bit_size // 2)
+            q = getPrime(self.bit_size // 2)
+            n = p * q
+            phi = (p - 1) * (q - 1)
+            try:
+                pow(self.e, -1, phi)
+                break
+            except ValueError:
+                pass
+        return n, self.e
+
+    def get_new_time_capsule(self):
+        n, e = self._get_new_pubkey()
+        m = bytes_to_long(self.msg)
+        m = pow(m, e, n)
+        return {&quot;time_capsule&quot;: f&quot;{m:X}&quot;, &quot;pubkey&quot;: [f&quot;{n:X}&quot;, f&quot;{e:X}&quot;]}
+
+def challenge(req):
+    time_capsule = TimeCapsule(FLAG)          # &lt;-- same msg reused
+    while True:
+        try:
+            req.sendall(b'Welcome to Qubit Enterprises. Would you like your own time capsule? (Y/n) ')
+            msg = req.recv(4096).decode().strip().upper()
+            if msg == 'Y' or msg == 'YES':
+                capsule = time_capsule.get_new_time_capsule()  # &lt;-- fresh n each time
+                req.sendall(json.dumps(capsule).encode() + b'\n')
+            elif msg == 'N' or msg == &quot;NO&quot;:
+                req.sendall(b'Thank you, take care\n')
+                break
+            else:
+                req.sendall(b'I\'m sorry I don\'t understand\n')
+        except:
+            return
+</code></pre>
+<hr />
+<h2>3. Vulnerability Analysis</h2>
+<p>Three independent design choices combine into a complete break:</p>
+<ol>
+<li>
+<p><strong>Small public exponent</strong> — <code>self.e = 5</code>. The code even guards against an invalid <code>e</code> (it regenerates <code>p</code>,<code>q</code> until <code>5</code> is invertible mod <code>phi(n)</code>), which means the authors <em>knew</em> <code>e</code> was small and went out of their way to keep it small and usable.</p>
+</li>
+<li>
+<p><strong>Message reuse</strong> — <code>time_capsule = TimeCapsule(FLAG)</code> is instantiated <strong>once</strong>, before the loop. Every capsule encrypts the identical plaintext <code>m = bytes_to_long(FLAG)</code>.</p>
+</li>
+<li>
+<p><strong>Fresh modulus per capsule</strong> — <code>_get_new_pubkey()</code> draws new <code>p</code>, <code>q</code> on every call, so each response is:
+   <code>c_i = m^5  (mod n_i),   with distinct n_i</code></p>
+</li>
+</ol>
+<p>The flag is short (~35 bytes → <code>m &lt; 2^280</code>), therefore <code>m^5 &lt; 2^1400</code>. The product of just <strong>two</strong> 1024-bit moduli is about <code>2^2048 &gt; 2^1400</code>, so <code>m^5</code> never actually wraps around the combined modulus. This is exactly the precondition for <strong>Håstad's broadcast attack</strong>.</p>
+<hr />
+<h2>4. Exploitation</h2>
+<h3>4.1 Reconnaissance / Interaction</h3>
+<p>Connected to the service and sent <code>Y</code> repeatedly, harvesting <code>(c_i, n_i, e=5)</code> tuples. The server prompt is <strong>not</strong> newline-terminated (<code>... (Y/n)</code> with a trailing space, no <code>\n</code>), so a robust collector was used that reads by availability and regex-extracts each JSON object rather than assuming line framing.</p>
+<p>Collected <strong>8</strong> capsules, e.g.:</p>
+<pre><code>[0] n=A1B06CB0549C…  c=358FD1DD78B6…
+[1] n=967692604653…  c=339A12114841…
+[2] n=9D41802366A7…  c=92A922BEBA70…
+[3] n=8BD3CD1A52EF…  c=22A5D8433036…
+…
+[7] n=CBCFB49506E5…  c=77273E05F268…
+</code></pre>
+<h3>4.2 Precondition checks</h3>
+<ul>
+<li><code>e = 5</code> confirmed from the <code>pubkey</code> field.</li>
+<li>Pairwise <code>gcd(n_i, n_j) == 1</code> for all 8 moduli — they are coprime, so CRT applies cleanly.</li>
+</ul>
+<h3>4.3 Chinese Remainder Theorem</h3>
+<p>Combined ciphertexts with the standard CRT (using <code>pow(Mi, -1, m)</code> for modular inverses):</p>
+<pre><code>M ≡ c_1 (mod n_1)
+M ≡ c_2 (mod n_2)
+</code></pre>
+<p>Because <code>m^5 &lt; n_1 · n_2</code>, the CRT result <code>M</code> equals the true integer <code>m^5</code> (not merely <code>m^5 mod N</code>).</p>
+<h3>4.4 Integer 5th root</h3>
+<p>Took the exact integer 5th root of <code>M</code> via binary search (since <code>M</code> is a perfect 5th power). Verified correctness by re-encrypting: <code>pow(m, 5, n_i) == c_i</code> for every collected pair.</p>
+<h3>4.5 Results</h3>
+<pre><code>e   = 5
+num capsules = 8
+m^e = 60222703216991723400896935611290377369451090117748355626588188127748777887605199005043629107938717425146115720040534532878250344911478543476035962359514021177352577862197382575981345584203655606236078211695991372921996113614939800630843735306107095629315859429285627820465793608409357274153378888592522535530765683506676500860162124152806217549586334803871530328776024103189374825571031181368031122915388013651885836012756786675021405847977357
+m   = 35970961710345507498932045278388335485301801627259486491503367005922441822236783551931517
+flag = [REDACTED]
+</code></pre>
+<hr />
+<h2>5. Flag</h2>
+<pre><code>[REDACTED]
+</code></pre>
+<hr />
+<h2>6. Step-by-Step Walkthrough</h2>
+<pre><code class="language-bash"># 1) Connect and collect capsules (send 'Y' several times)
+python collect3.py        # -&gt; saves capsules.json (8 x {time_capsule, pubkey})
+
+# 2) Recover flag via Håstad broadcast
+python solve.py           # CRT + integer 5th root -&gt; [REDACTED]
+</code></pre>
+<p><strong>Collector</strong> (<code>collect3.py</code>) — key detail is the non-newline-terminated prompt, handled by availability reads + JSON regex:</p>
+<pre><code class="language-python">for i in range(8):
+    s.sendall(b&quot;Y\n&quot;)
+    time.sleep(0.4)
+    txt = recv_all().decode(errors=&quot;replace&quot;)
+    for m in re.finditer(r'\{[^{}]*\}', txt):
+        obj = json.loads(m.group())
+        capsules.append(obj)
+</code></pre>
+<p><strong>Solver</strong> (<code>solve.py</code>) — core logic:</p>
+<pre><code class="language-python">def crt(residues, moduli):
+    M = 1
+    for m in moduli: M *= m
+    x = 0
+    for (r, m) in zip(residues, moduli):
+        Mi = M // m
+        inv = pow(Mi, -1, m)
+        x += r * Mi * inv
+    return x % M
+
+def iroot(n, k):
+    lo, hi = 0, 1 &lt;&lt; ((n.bit_length() + k - 1) // k + 1)
+    while lo &lt; hi:
+        mid = (lo + hi + 1) // 2
+        if mid ** k &lt;= n: lo = mid
+        else:              hi = mid - 1
+    return lo
+
+M = crt(cs, ns)                 # m^5 as an integer
+m = iroot(M, e)                 # exact 5th root
+flag = m.to_bytes((m.bit_length()+7)//8, &quot;big&quot;)
+</code></pre>
+<hr />
+<h2>7. Why It Worked</h2>
+<ul>
+<li><strong>Small <code>e</code> + small <code>m</code></strong> ⇒ <code>m^e</code> stays below the combined modulus, so CRT recovers the <em>exact</em> power rather than a residue class.</li>
+<li><strong>Message reuse</strong> ⇒ all ciphertexts are encryptions of the <em>same</em> <code>m</code>, the essential requirement for the broadcast attack.</li>
+<li><strong>Coprime moduli</strong> ⇒ CRT has a unique, computable solution.</li>
+</ul>
+<h2>8. Mitigations</h2>
+<ul>
+<li><strong>Use a proper padding scheme</strong> (OAEP / PKCS#1 v1.5) — textbook RSA is never safe in practice.</li>
+<li><strong>Use a standard exponent</strong> (<code>e = 65537</code>) and, more importantly, <strong>do not reuse a message</strong> across multiple public keys.</li>
+<li><strong>Randomize per-encryption</strong> (e.g., OAEP's random nonce) so identical plaintexts never produce identical <code>m</code>.</li>
+</ul>
+<h2>9. Artifacts</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>collect3.py</code></td>
+<td>Harvests <code>(c_i, n_i, e)</code> tuples from the service</td>
+</tr>
+<tr>
+<td><code>capsules.json</code></td>
+<td>Raw captured capsules (evidence)</td>
+</tr>
+<tr>
+<td><code>solve.py</code></td>
+<td>Håstad CRT + integer-root recovery</td>
+</tr>
+</tbody>
+</table></div>
+    <a class="back-link" href="index.html">← all writeups</a>
+  </article>
+</main>
+<footer>
+  <div class="wrap footer-row">
+    <span>© 2026 Arthur Trapp · Rochester, NY</span>
+    <span class="clearance">ACTIVE TS/SCI CLEARANCE</span>
+  </div>
+</footer>
+<script>
+  const io = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.content h2, .content h3, .content p, .content pre, .content table, .content ul, .content ol, .content blockquote').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

