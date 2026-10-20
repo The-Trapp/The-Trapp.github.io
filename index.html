@@ -307,6 +307,86 @@
   .project .name { font-size: 16px; font-weight: 600; }
   .project .desc { color: var(--faint); font-size: 13px; margin-top: 3px; }
   .project .arrow { font-family: var(--mono); color: var(--accent); font-size: 18px; }
+
+  /* Active/Retired Badges and HTB Grouping */
+  .badge-active {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--accent);
+    background: rgba(247, 156, 66, 0.12);
+    border: 1px solid var(--accent-dim);
+    border-radius: 4px;
+    padding: 1px 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .badge-active .mini-dot {
+    width: 6px;
+    height: 6px;
+    background-color: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--accent);
+    animation: activePulse 2s infinite;
+  }
+  @keyframes activePulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(247, 156, 66, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(247, 156, 66, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(247, 156, 66, 0); }
+  }
+  .badge-retired {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--border) 40%, transparent);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .project.card-active {
+    border-color: rgba(247, 156, 66, 0.35);
+    background: linear-gradient(135deg, rgba(247, 156, 66, 0.04), transparent 60%), var(--bg-elevated);
+  }
+  .project.card-active:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 20px rgba(247, 156, 66, 0.15);
+  }
+  .project .card-topline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 3px;
+  }
+  .htb-subhead {
+    font-family: var(--mono);
+    font-size: 13.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 36px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .htb-subhead.retired {
+    color: var(--fg);
+  }
+  .htb-subhead .subhead-count {
+    font-size: 12px;
+    color: var(--faint);
+  }
   .note { color: var(--muted); max-width: 680px; margin-bottom: 28px; }
   .note .note-link { color: var(--blue); font-family: var(--mono); font-size: 14px; }
   .note .note-link:hover { color: var(--accent-bright); }
@@ -632,78 +712,256 @@
         <h2>:: HACK THE BOX</h2>
         <span class="count">07</span>
       </div>
-      <p class="note reveal">Full attack-chain writeups for retired Hack The Box machines and challenges I've solved — from initial recon to root. <a class="note-link" href="https://app.hackthebox.com/users/1517323" target="_blank" rel="noopener">↳ view my HTB profile</a></p>
+      <p class="note reveal">Attack-chain writeups and tracking for Hack The Box machines and challenges. Active target writeups remain embargoed per HTB rules until retirement, while retired targets feature full recon-to-root chains. <a class="note-link" href="https://app.hackthebox.com/users/1517323" target="_blank" rel="noopener">↳ view my HTB profile</a></p>
+      
+      <!-- ACTIVE BOXES -->
+      <div class="htb-subhead reveal">
+        <span><span class="badge-active"><span class="mini-dot"></span> Active</span> Active Boxes</span>
+        <span class="subhead-count">4 Machines · Writeup Pending Retirement</span>
+      </div>
       <div class="projects">
-        <a class="project reveal" href="htb/cohort.html">
-          <div><div class="name">Cohort</div><div class="desc">SSRF → Marimo WebSocket RCE → PackageKit TOCTOU</div></div>
+        <a class="project card-active reveal" href="htb/cohort.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-active"><span class="mini-dot"></span> Active</span>
+              <div class="name">Cohort</div>
+            </div>
+            <div class="desc">SSRF → Marimo WebSocket RCE → PackageKit TOCTOU</div>
+          </div>
           <span class="arrow">↳</span>
         </a>
+        <a class="project card-active reveal" href="htb/enigma.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-active"><span class="mini-dot"></span> Active</span>
+              <div class="name">Enigma</div>
+            </div>
+            <div class="desc">NFS → Roundcube → OpenSTAManager RCE → OliveTin</div>
+          </div>
+          <span class="arrow">↳</span>
+        </a>
+        <a class="project card-active reveal" href="htb/management.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-active"><span class="mini-dot"></span> Active</span>
+              <div class="name">Management</div>
+            </div>
+            <div class="desc">OpenAM deserialization RCE → GLPI decryption</div>
+          </div>
+          <span class="arrow">↳</span>
+        </a>
+        <a class="project card-active reveal" href="htb/paperwork.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-active"><span class="mini-dot"></span> Active</span>
+              <div class="name">Paperwork</div>
+            </div>
+            <div class="desc">LPD injection → JetDirect traversal → SCM_RIGHTS leak</div>
+          </div>
+          <span class="arrow">↳</span>
+        </a>
+      </div>
+
+      <!-- ACTIVE CHALLENGES -->
+      <div class="htb-subhead reveal" style="margin-top: 44px;">
+        <span><span class="badge-active"><span class="mini-dot"></span> Active</span> Active Challenges</span>
+        <span class="subhead-count">9 Challenges · Writeup Pending Retirement</span>
+      </div>
+      <div class="projects">
+        <a class="project card-active reveal" href="htb/time-capsule.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-active"><span class="mini-dot"></span> Active</span>
+              <div class="name">Baby Time Capsule</div>
+            </div>
+            <div class="desc">Crypto — Håstad broadcast RSA (small e=5)</div>
+          </div>
+          <span class="arrow">↳</span>
+        </a>
+        <a class="project card-active reveal" href="htb/babyencryption.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-active"><span class="mini-dot"></span> Active</span>
+              <div class="name">BabyEncryption</div>
+            </div>
+            <div class="desc">Crypto — Modular affine cipher brute-force</div>
+          </div>
+          <span class="arrow">↳</span>
+        </a>
+        <a class="project card-active reveal" href="htb/espresso.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-active"><span class="mini-dot"></span> Active</span>
+              <div class="name">Espresso</div>
+            </div>
+            <div class="desc">Hardware — ESP32 firmware analysis & Xtensa emulation</div>
+          </div>
+          <span class="arrow">↳</span>
+        </a>
+        <a class="project card-active reveal" href="htb/ether-tag.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-active"><span class="mini-dot"></span> Active</span>
+              <div class="name">Ether Tag</div>
+            </div>
+            <div class="desc">Hardware/ICS — CIP Symbol Object enumeration</div>
+          </div>
+          <span class="arrow">↳</span>
+        </a>
+        <a class="project card-active reveal" href="htb/firstcontact.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-active"><span class="mini-dot"></span> Active</span>
+              <div class="name">First Contact</div>
+            </div>
+            <div class="desc">Satellite — Skyfield SGP4 pass prediction</div>
+          </div>
+          <span class="arrow">↳</span>
+        </a>
+        <a class="project card-active reveal" href="htb/lucky-dice.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-active"><span class="mini-dot"></span> Active</span>
+              <div class="name">Lucky Dice</div>
+            </div>
+            <div class="desc">Misc — Socket protocol & automation</div>
+          </div>
+          <span class="arrow">↳</span>
+        </a>
+        <a class="project card-active reveal" href="htb/restaurant.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-active"><span class="mini-dot"></span> Active</span>
+              <div class="name">Restaurant</div>
+            </div>
+            <div class="desc">Pwn — 64-bit buffer overflow & ret2libc execution</div>
+          </div>
+          <span class="arrow">↳</span>
+        </a>
+        <a class="project card-active reveal" href="htb/space-explorer.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-active"><span class="mini-dot"></span> Active</span>
+              <div class="name">Space Explorer</div>
+            </div>
+            <div class="desc">Web — JSON deserialization differential</div>
+          </div>
+          <span class="arrow">↳</span>
+        </a>
+        <a class="project card-active reveal" href="htb/treaportal.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-active"><span class="mini-dot"></span> Active</span>
+              <div class="name">TreaPortal</div>
+            </div>
+            <div class="desc">Web — HPP + SQL injection auth bypass</div>
+          </div>
+          <span class="arrow">↳</span>
+        </a>
+      </div>
+
+      <!-- RETIRED BOXES -->
+      <div class="htb-subhead retired reveal" style="margin-top: 48px;">
+        <span><span class="badge-retired">Retired</span> Retired Boxes</span>
+        <span class="subhead-count">6 Machines · Full Writeup Available</span>
+      </div>
+      <div class="projects">
         <a class="project reveal" href="htb/curl.html">
-          <div><div class="name">Curl</div><div class="desc">Web — SSRF + OS command injection</div></div>
-          <span class="arrow">↳</span>
-        </a>
-        <a class="project reveal" href="htb/enigma.html">
-          <div><div class="name">Enigma</div><div class="desc">NFS → Roundcube → OpenSTAManager RCE → OliveTin</div></div>
-          <span class="arrow">↳</span>
-        </a>
-        <a class="project reveal" href="htb/ether-tag.html">
-          <div><div class="name">Ether Tag</div><div class="desc">Hardware/ICS — CIP Symbol Object enumeration</div></div>
-          <span class="arrow">↳</span>
-        </a>
-        <a class="project reveal" href="htb/firstcontact.html">
-          <div><div class="name">First Contact</div><div class="desc">Satellite — Skyfield SGP4 pass prediction</div></div>
-          <span class="arrow">↳</span>
-        </a>
-        <a class="project reveal" href="htb/flagcommand.html">
-          <div><div class="name">Flag Command</div><div class="desc">Web — /api/options info disclosure</div></div>
+          <div>
+            <div class="card-topline">
+              <span class="badge-retired">Retired</span>
+              <div class="name">Curl</div>
+            </div>
+            <div class="desc">Web — SSRF + OS command injection</div>
+          </div>
           <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="htb/gridtalk.html">
-          <div><div class="name">GridTalk</div><div class="desc">ICS/SCADA — IEC 104 breaker diagnostic</div></div>
-          <span class="arrow">↳</span>
-        </a>
-        <a class="project reveal" href="htb/management.html">
-          <div><div class="name">Management</div><div class="desc">OpenAM deserialization RCE → GLPI decryption</div></div>
+          <div>
+            <div class="card-topline">
+              <span class="badge-retired">Retired</span>
+              <div class="name">GridTalk</div>
+            </div>
+            <div class="desc">ICS/SCADA — IEC 104 breaker diagnostic</div>
+          </div>
           <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="htb/nexus.html">
-          <div><div class="name">Nexus</div><div class="desc">Git-history leak → TinyMCE upload RCE → path traversal</div></div>
-          <span class="arrow">↳</span>
-        </a>
-        <a class="project reveal" href="htb/open-secrets.html">
-          <div><div class="name">Open Secrets</div><div class="desc">Web — flag hardcoded in source</div></div>
+          <div>
+            <div class="card-topline">
+              <span class="badge-retired">Retired</span>
+              <div class="name">Nexus</div>
+            </div>
+            <div class="desc">Git-history leak → TinyMCE upload RCE → path traversal</div>
+          </div>
           <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="htb/orion.html">
-          <div><div class="name">Orion</div><div class="desc">Craft CMS object-injection RCE → telnetd bypass</div></div>
-          <span class="arrow">↳</span>
-        </a>
-        <a class="project reveal" href="htb/paperwork.html">
-          <div><div class="name">Paperwork</div><div class="desc">LPD injection → JetDirect traversal → SCM_RIGHTS leak</div></div>
+          <div>
+            <div class="card-topline">
+              <span class="badge-retired">Retired</span>
+              <div class="name">Orion</div>
+            </div>
+            <div class="desc">Craft CMS object-injection RCE → telnetd bypass</div>
+          </div>
           <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="htb/reactor.html">
-          <div><div class="name">Reactor</div><div class="desc">React2Shell RCE → SQLite creds → Node.js inspector</div></div>
-          <span class="arrow">↳</span>
-        </a>
-        <a class="project reveal" href="htb/space-explorer.html">
-          <div><div class="name">Space Explorer</div><div class="desc">Web — JSON deserialization differential</div></div>
-          <span class="arrow">↳</span>
-        </a>
-        <a class="project reveal" href="htb/spookypass.html">
-          <div><div class="name">SpookyPass</div><div class="desc">Reverse Engineering — plaintext cred via strings</div></div>
-          <span class="arrow">↳</span>
-        </a>
-        <a class="project reveal" href="htb/time-capsule.html">
-          <div><div class="name">Time Capsule</div><div class="desc">Crypto — Håstad broadcast RSA</div></div>
-          <span class="arrow">↳</span>
-        </a>
-        <a class="project reveal" href="htb/treaportal.html">
-          <div><div class="name">TreaPortal</div><div class="desc">Web — HPP + SQL injection auth bypass</div></div>
+          <div>
+            <div class="card-topline">
+              <span class="badge-retired">Retired</span>
+              <div class="name">Reactor</div>
+            </div>
+            <div class="desc">React2Shell RCE → SQLite creds → Node.js inspector</div>
+          </div>
           <span class="arrow">↳</span>
         </a>
         <a class="project reveal" href="htb/twomillion.html">
-          <div><div class="name">TwoMillion</div><div class="desc">API mass-assignment → command injection → kernel exploit</div></div>
+          <div>
+            <div class="card-topline">
+              <span class="badge-retired">Retired</span>
+              <div class="name">TwoMillion</div>
+            </div>
+            <div class="desc">API mass-assignment → command injection → kernel exploit</div>
+          </div>
+          <span class="arrow">↳</span>
+        </a>
+      </div>
+
+      <!-- RETIRED CHALLENGES -->
+      <div class="htb-subhead retired reveal" style="margin-top: 44px;">
+        <span><span class="badge-retired">Retired</span> Retired Challenges</span>
+        <span class="subhead-count">3 Challenges · Full Writeup Available</span>
+      </div>
+      <div class="projects">
+        <a class="project reveal" href="htb/flagcommand.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-retired">Retired</span>
+              <div class="name">Flag Command</div>
+            </div>
+            <div class="desc">Web — /api/options info disclosure</div>
+          </div>
+          <span class="arrow">↳</span>
+        </a>
+        <a class="project reveal" href="htb/open-secrets.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-retired">Retired</span>
+              <div class="name">Open Secrets</div>
+            </div>
+            <div class="desc">Web — flag hardcoded in source</div>
+          </div>
+          <span class="arrow">↳</span>
+        </a>
+        <a class="project reveal" href="htb/spookypass.html">
+          <div>
+            <div class="card-topline">
+              <span class="badge-retired">Retired</span>
+              <div class="name">SpookyPass</div>
+            </div>
+            <div class="desc">Reverse Engineering — plaintext cred via strings</div>
+          </div>
           <span class="arrow">↳</span>
         </a>
       </div>

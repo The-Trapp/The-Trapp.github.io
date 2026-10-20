@@ -11,7 +11,26 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="../assets/style.css" />
 </head>
-<body>
+<body class="has-active-modal">
+<div class="active-overlay" role="dialog" aria-modal="true" aria-labelledby="active-title">
+  <div class="active-modal">
+    <div class="active-badge-pill">
+      <span class="active-pulse-dot"></span>
+      <span>HTB Active Target</span>
+    </div>
+    <h2 id="active-title">This box is still active, writeup will be released when box is retired</h2>
+    <p class="active-desc">In compliance with Hack The Box rules, full attack-chain methodology, exploit scripts, and flags remain embargoed until this target is officially retired into the HTB archive.</p>
+    <div class="active-target-meta">
+      Target: <strong>Space Explorer</strong> · Type: <strong>Challenge (Easy · Web)</strong> · Status: <strong>Active Lab</strong>
+    </div>
+    <div class="active-modal-actions">
+      <a href="index.html" class="active-btn active-btn-primary">← All HTB Writeups</a>
+      <a href="../index.html#htb" class="active-btn active-btn-secondary">Portfolio Home</a>
+      <a href="https://app.hackthebox.com/users/1517323" target="_blank" rel="noopener" class="active-btn active-btn-secondary">HTB Profile ↗</a>
+    </div>
+  </div>
+</div>
+<div class="active-page-content">
 <header>
   <div class="wrap nav">
     <a class="nav-brand" href="../index.html"><span class="logo">AT</span>arthur_trapp</a>
@@ -119,6 +138,7 @@
     <span class="clearance">ACTIVE TS/SCI CLEARANCE</span>
   </div>
 </footer>
+</div>
 <script>
   const io = new IntersectionObserver((es) => {
     es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
