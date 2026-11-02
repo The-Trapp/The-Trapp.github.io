@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Arthur Trapp — Cyber Warfare Officer · Offensive Security</title>
-<meta name="description" content="Arthur Trapp — Cyber Warfare Officer and offensive security specialist with an active TS/SCI clearance. Penetration testing, threat emulation, and AI." />
+<meta name="description" content="Arthur Trapp — Cyber Warfare Officer and offensive security specialist. Penetration testing, threat emulation, and AI." />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23181a1e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -83,15 +83,6 @@
     transition: color .15s ease;
   }
   .nav-links a:hover { color: var(--accent); }
-  .nav-resume {
-    border: 1px solid var(--accent-dim);
-    color: var(--accent) !important;
-    padding: 5px 12px;
-    border-radius: 4px;
-    transition: background .15s ease, color .15s ease;
-  }
-  .nav-resume:hover { background: var(--accent); color: #14161a !important; }
-
   /* ---------- Hero ---------- */
   .hero { padding: 96px 0 72px; border-bottom: 1px solid var(--border); }
   .hero-grid {
@@ -136,7 +127,6 @@
     border-radius: 4px;
     padding: 5px 10px;
   }
-  .tag.clearance { color: var(--accent); border-color: var(--accent-dim); }
 
   /* Terminal card */
   .terminal {
@@ -428,7 +418,6 @@
     font-size: 12.5px;
     color: var(--faint);
   }
-  .footer-row .clearance { color: var(--accent); }
 
   /* Reveal animation */
   .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
@@ -447,7 +436,6 @@
     .hero-grid { gap: 40px; }
     .exp-item { grid-template-columns: 1fr; gap: 8px; }
     .nav-links { gap: 18px; }
-    .nav-links a:not(.nav-resume) { display: none; }
     .footer-row { flex-direction: column; align-items: flex-start; }
   }
 </style>
@@ -464,7 +452,6 @@
       <a href="#projects">projects</a>
       <a href="htb/">writeups</a>
       <a href="#contact">contact</a>
-      <a class="nav-resume" href="resume.pdf" download>resume</a>
     </nav>
   </div>
 </header>
@@ -478,7 +465,6 @@
         <h1>Arthur<br />Trapp</h1>
         <p class="role"><span class="accent">Cyber Warfare Officer</span> · Offensive Security Specialist</p>
         <div class="hero-tags">
-          <span class="tag clearance">Active TS/SCI Clearance</span>
           <span class="tag">M.S. AI @ UNC Charlotte</span>
           <span class="tag">B.S. Cybersecurity @ RIT</span>
           <span class="tag">CompTIA Security+</span>
@@ -503,7 +489,7 @@
       </div>
       <div class="about-grid">
         <div class="about reveal">
-          <p>I'm a <strong>Cyber Warfare Officer</strong> in the North Carolina Army National Guard and an offensive security specialist with an active TS/SCI clearance. I combine military operational leadership with a technical foundation spanning <strong>artificial intelligence</strong> and <strong>cybersecurity</strong>.</p>
+          <p>I'm a <strong>Cyber Warfare Officer</strong> in the North Carolina Army National Guard and an offensive security specialist. I combine military operational leadership with a technical foundation spanning <strong>artificial intelligence</strong> and <strong>cybersecurity</strong>.</p>
           <p>I spend most of my free time in labs breaking things on purpose — penetration testing, threat emulation, and vulnerability research — so I can learn how to defend the systems that actually matter.</p>
           <p>Off the keyboard, I'm a semi-professional obstacle course racer who has competed in multiple world championships.</p>
         </div>
@@ -1025,7 +1011,6 @@
 <footer>
   <div class="wrap footer-row">
     <span>© 2026 Arthur Trapp · Rochester, NY</span>
-    <span class="clearance">ACTIVE TS/SCI CLEARANCE</span>
   </div>
 </footer>
 
@@ -1035,7 +1020,6 @@
     { type: 'cmd',  text: '❯ whois arthur_trapp' },
     { type: 'out',  text: 'name:        Arthur Trapp' },
     { type: 'out',  text: 'role:        Cyber Warfare Officer' },
-    { type: 'out',  text: 'clearance:   TS/SCI' },
     { type: 'out',  text: 'status:      offensive security' },
     { type: 'ok',   text: '[*] Penetration Testing' },
     { type: 'ok',   text: '[*] Threat Emulation' },

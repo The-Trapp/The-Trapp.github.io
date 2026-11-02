@@ -10,7 +10,7 @@ Source code for my personal cybersecurity portfolio and Hack The Box writeup arc
 
 This repository contains the source code for [the-trapp.github.io](https://the-trapp.github.io), showcasing:
 
-- **Professional Profile:** Cyber Warfare Officer, offensive security specialist (Penetration Testing, Threat Emulation, Vulnerability Assessment) with an active TS/SCI clearance.
+- **Professional Profile:** Cyber Warfare Officer, offensive security specialist (Penetration Testing, Threat Emulation, Vulnerability Assessment).
 - **Hack The Box Archive:** Full attack-chain writeups for retired HTB machines and challenges (from initial recon to root), alongside responsible disclosure tracking for active labs.
 - **Technical Projects:** Selected security exercises, software architecture audits, cryptography demos, and engineering projects.
 
@@ -28,7 +28,6 @@ The-Trapp.github.io/
 │   ├── *.html            # Individual machine and challenge writeups
 ├── projects/             # Deep-dives for featured projects
 │   ├── *.html
-├── resume.pdf            # Professional resume
 └── README.md             # Project documentation
 ```
 
