@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CSV Analyzer · Arthur Trapp</title>
+<meta name="description" content="AI-powered CSV visualization and analysis web app — upload any CSV and generate interactive Altair charts with Gemini." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23181a1e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' fill='%23f79c42' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="nav-brand" href="../index.html"><span class="logo">AT</span>arthur_trapp</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="../index.html#about">about</a>
+      <a class="active" href="../index.html#projects">projects</a>
+      <a href="../htb/">writeups</a>
+      <a href="../index.html#contact">contact</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page-hero">
+    <div class="wrap">
+      <div class="crumb"><a href="../index.html">~</a> / projects / csv-analyzer</div>
+      <h1>CSV Analyzer</h1>
+      <p class="sub">AI-powered <span class="accent">CSV visualization</span> &amp; analysis</p>
+      <div class="meta-tags">
+        <span>Python</span>
+        <span>Streamlit</span>
+        <span class="accent">Gemini</span>
+        <span>Altair</span>
+      </div>
+    </div>
+  </div>
+
+  <article class="content wrap">
+    <p>An intelligent, interactive tabular data visualization web app. Upload any CSV file, ask questions in natural language, and let <strong>Gemini</strong> analyze the schema, follow a domain-specific charting skill, and generate interactive <strong>Altair</strong> charts — with self-healing code execution when something breaks.</p>
+
+    <div class="section-label">What it does</div>
+    <ul>
+      <li><strong>Any CSV ingestion</strong> — upload files up to 10MB or pick from built-in sample datasets.</li>
+      <li><strong>Automatic schema extraction</strong> — columns, types, null counts, and sample values without sending the whole dataset over the wire.</li>
+      <li><strong>Skill-guided visualization</strong> — Gemini reads a dedicated charting skill to enforce chart selection, unit labeling, and non-null handling.</li>
+      <li><strong>Self-healing execution</strong> — Altair code runs in an isolated namespace; failures are fed back to Gemini for an automatic repair attempt.</li>
+      <li><strong>Interactive charts</strong> — responsive Altair output with hover tooltips and zoom/pan.</li>
+      <li><strong>Code &amp; trace transparency</strong> — inspect the generated Python and the agent's full tool-execution trace.</li>
+    </ul>
+
+    <div class="section-label">Live demo</div>
+    <div style="border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg-code); box-shadow: 0 10px 30px rgba(0,0,0,0.25); margin: 16px 0 28px;">
+      <iframe
+        src="https://bestcsvanalyzer.streamlit.app/?embed=true"
+        title="CSV Analyzer — live app"
+        width="100%"
+        height="850px"
+        frameborder="0"
+        allow="clipboard-write"
+        loading="lazy"
+        style="display: block; width: 100%; border: 0;"
+      ></iframe>
+    </div>
+
+    <div class="project-links">
+      <a href="https://github.com/The-Trapp/CSV-Analyzer" target="_blank" rel="noopener"><span class="arr">↳</span>source code on GitHub</a>
+      <a href="https://bestcsvanalyzer.streamlit.app/" target="_blank" rel="noopener"><span class="arr">↳</span>open full app</a>
+    </div>
+    <a class="back-link" href="../index.html#projects">← all projects</a>
+  </article>
+</main>
+<footer>
+  <div class="wrap footer-row">
+    <span>© 2026 Arthur Trapp · Rochester, NY</span>
+  </div>
+</footer>
+</body>
+</html>
